@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
   "name": "RightLingo",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Translation, right in your context menu. 原生右键翻译。",
   "permissions": ["contextMenus"],
+  "host_permissions": ["https://translate.googleapis.com/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {

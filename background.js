@@ -1,17 +1,25 @@
 // RightLingo Service Worker（MV3 后台）
-// 职责：管理原生右键菜单；接收选中文本，把菜单标题更新为测试文案。
-// 阶段一先证明整条管线：选中文字 → content script 上报 → SW 更新菜单 → 右键可见。
+// 职责：管理原生右键菜单；接收选中文本，翻译后把译文写进菜单标题。
+// 管线：选中文字 → content script 上报 → SW 翻译并更新菜单 → 右键即可看到。
+
+import { translateText } from './translate.js';
 
 const MENU_ROOT_ID = 'rl-root';
-const TITLE_PREFIX = '译文：（测试）';
+const TITLE_PREFIX = '译文：';
 // 一级菜单预览的显示宽度上限：CJK/全角按 2 计、其余按 1 计，80 ≈ 40 个汉字。
 // Chrome 对菜单标题没有字符数硬上限，会把菜单撑宽（有系统最大值），超宽才按像素截断；
 // 这个上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
 const PREVIEW_MAX_WIDTH = 80;
 
-// 新选区手势开始时先显示的占位符：保证菜单不会残留上一次的内容。
-// 阶段二接入真实翻译后，这个位置会变成"正在翻译…"。
-const PLACEHOLDER_TITLE = '译文：（选区更新中…）';
+// 新选区手势开始时先显示的占位符：保证菜单不残留上一次的内容，兼作"正在翻译"提示。
+const PLACEHOLDER_TITLE = '译文：正在翻译…';
+const FAILED_TITLE = '译文：（翻译失败）';
+const ZH_SOURCE_TITLE = '译文：（原文已是中文）';
+
+// 菜单最多只能显示约 40 个汉字，超过这个长度的部分翻译了也显示不了
+// （"复制完整译文"是后续阶段的能力），先对送翻译的文本设上限。
+const MAX_TRANSLATION_CHARS = 500;
+const CACHE_MAX_ENTRIES = 100;
 
 // SW 每次被唤醒都会重新执行顶层代码。
 // 菜单注册在浏览器里、跨 SW 重启持久存在，所以重复 create 会报 duplicate id，属预期，忽略即可。
@@ -34,15 +42,52 @@ function createMenus() {
   );
 }
 
+// 请求序号：拖选会连续触发多次翻译，响应到达顺序不保证，
+// 只认最新一次请求的结果，过期的直接丢弃。
+let requestSeq = 0;
+const translationCache = new Map(); // 原文 -> { text, srcLang }
+
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || typeof msg !== 'object') return;
   if (msg.type === 'selection-reset') {
     // 新的选择手势开始：先把菜单重置为占位符，避免右键时残留上一次的内容
     setMenuTitle(PLACEHOLDER_TITLE);
   } else if (msg.type === 'selection' && typeof msg.text === 'string') {
-    setMenuTitle(buildPreviewTitle(msg.text));
+    translateSelection(msg.text);
   }
 });
+
+async function translateSelection(text) {
+  const trimmed = text.trim().slice(0, MAX_TRANSLATION_CHARS);
+  if (!trimmed) return;
+  const seq = ++requestSeq;
+
+  let result;
+  try {
+    result = await getTranslation(trimmed);
+  } catch (err) {
+    console.error('[RightLingo] 翻译失败:', err.message);
+    if (seq === requestSeq) setMenuTitle(FAILED_TITLE);
+    return;
+  }
+
+  if (seq !== requestSeq) return; // 已有更新的选区，这份结果过期了
+
+  if (result.srcLang.startsWith('zh')) {
+    setMenuTitle(ZH_SOURCE_TITLE);
+    return;
+  }
+  setMenuTitle(buildPreviewTitle(result.text));
+}
+
+async function getTranslation(text) {
+  const cached = translationCache.get(text);
+  if (cached) return cached;
+  const result = await translateText(text);
+  if (translationCache.size >= CACHE_MAX_ENTRIES) translationCache.clear();
+  translationCache.set(text, result);
+  return result;
+}
 
 // 近似的“显示宽度”：中日韩全角字符按 2 格、其余按 1 格。阶段三/四会复用并按实测微调。
 function charDisplayWidth(char) {
