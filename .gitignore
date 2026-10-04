@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+
+# Chrome 扩展打包产物（.pem 是上架私钥，绝不能提交）
+*.zip
+*.crx
+*.pem
+
+# 以后如果加入构建工具再用到
+node_modules/
+dist/
