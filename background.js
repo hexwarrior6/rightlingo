@@ -9,6 +9,10 @@ const TITLE_PREFIX = '译文：（测试）';
 // 这个上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
 const PREVIEW_MAX_WIDTH = 80;
 
+// 新选区手势开始时先显示的占位符：保证菜单不会残留上一次的内容。
+// 阶段二接入真实翻译后，这个位置会变成"正在翻译…"。
+const PLACEHOLDER_TITLE = '译文：（选区更新中…）';
+
 // SW 每次被唤醒都会重新执行顶层代码。
 // 菜单注册在浏览器里、跨 SW 重启持久存在，所以重复 create 会报 duplicate id，属预期，忽略即可。
 createMenus();
@@ -31,8 +35,12 @@ function createMenus() {
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg && msg.type === 'selection' && typeof msg.text === 'string') {
-    updateMenuTitle(msg.text);
+  if (!msg || typeof msg !== 'object') return;
+  if (msg.type === 'selection-reset') {
+    // 新的选择手势开始：先把菜单重置为占位符，避免右键时残留上一次的内容
+    setMenuTitle(PLACEHOLDER_TITLE);
+  } else if (msg.type === 'selection' && typeof msg.text === 'string') {
+    setMenuTitle(buildPreviewTitle(msg.text));
   }
 });
 
@@ -69,10 +77,13 @@ function truncateByWidth(text, maxWidth) {
   return { text, truncated: false };
 }
 
-function updateMenuTitle(text) {
+function buildPreviewTitle(text) {
   const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
   const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
-  const title = `${TITLE_PREFIX}${preview}${truncated ? '…' : ''}`;
+  return `${TITLE_PREFIX}${preview}${truncated ? '…' : ''}`;
+}
+
+function setMenuTitle(title) {
 
   chrome.contextMenus.update(MENU_ROOT_ID, { title }, () => {
     const err = chrome.runtime.lastError;

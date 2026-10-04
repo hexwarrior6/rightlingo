@@ -17,8 +17,12 @@ rightlingo/
 ## 数据流（阶段一）
 
 ```text
-选中文本 → content.js（去抖 300ms）→ chrome.runtime.sendMessage
-        → 唤醒 background.js → 更新菜单标题 → 用户右键即可看到
+选区开始变化（selectionchange）→ selection-reset → 菜单立即切到占位符，不残留旧内容
+选区结束（mouseup 立即 / 键盘选区 150ms 去抖）→ selection → 菜单更新为当前选区预览
+用户右键 → 菜单里必然是以下三种状态之一（可分辨）：
+  1. 当前选区的内容      —— 正常
+  2. 译文：（选区更新中…）—— 已识别新手势，内容马上就绪
+  3. 上一次选区的内容    —— 异常信号（上报丢失），不应再出现；若出现请反馈
 ```
 
 ## 如何加载扩展
