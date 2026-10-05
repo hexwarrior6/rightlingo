@@ -165,6 +165,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 
 async function handleMenuClick(info) {
   if (!COPYABLE_IDS.has(info.menuItemId)) return;
+  console.log('[RightLingo] 菜单点击:', info.menuItemId);
   const original = (info.selectionText || '').trim().slice(0, MAX_TRANSLATION_CHARS);
   if (!original) return;
 
@@ -186,13 +187,48 @@ async function handleMenuClick(info) {
 async function copyToClipboard(text) {
   // MV3 SW 无法直接写剪贴板（无焦点），由 offscreen 文档代劳
   if (!(await chrome.offscreen.hasDocument())) {
-    await chrome.offscreen.createDocument({
-      url: 'offscreen.html',
-      reasons: ['CLIPBOARD'],
-      justification: '响应右键菜单的"复制译文"操作',
-    });
+    await createOffscreenDocument();
   }
-  await chrome.runtime.sendMessage({ target: 'offscreen', type: 'copy', text });
+  try {
+    await sendCopyMessage(text);
+  } catch (err) {
+    // 文档在但监听器不在（如扩展更新前遗留的旧文档）：关掉重建再试一次
+    console.warn('[RightLingo] offscreen 首次投递失败，重建文档重试:', err.message);
+    await chrome.offscreen.closeDocument();
+    await createOffscreenDocument();
+    await sendCopyMessage(text);
+  }
+}
+
+async function createOffscreenDocument() {
+  await chrome.offscreen.createDocument({
+    url: 'offscreen.html',
+    reasons: ['CLIPBOARD'],
+    justification: '响应右键菜单的"复制译文"操作',
+  });
+}
+
+async function sendCopyMessage(text) {
+  // 刚创建的文档监听器可能尚未就绪，投递失败就短暂等待重试
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const ok = await chrome.runtime.sendMessage({
+        target: 'offscreen',
+        type: 'copy',
+        text,
+      });
+      if (ok !== true) {
+        throw new Error('offscreen 页 execCommand("copy") 返回 false');
+      }
+      return;
+    } catch (err) {
+      // 只对"投递失败"重试；execCommand 失败直接抛给上层
+      if (attempt >= 3 || !/Receiving end does not exist/i.test(err.message)) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+  }
 }
 
 // ---------- 菜单显示 ----------
