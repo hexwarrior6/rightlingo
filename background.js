@@ -35,6 +35,21 @@ const COPYABLE_IDS = new Set([
   SUBMENU_COPY_ID,
 ]);
 
+// 词典模式：单词查询时按词性分组展示多个释义（接口 dt=bd 词典区，网页版"词典"标签同源）。
+// 与译文行共用同一组行槽位，每个词性占一行。
+const POS_LABELS = {
+  noun: '名',
+  verb: '动',
+  adjective: '形',
+  adverb: '副',
+  preposition: '介',
+  conjunction: '连',
+  pronoun: '代',
+  interjection: '叹',
+  phrase: '短语',
+  numeral: '数',
+};
+
 // 状态文案：新选区手势开始时的占位符（兼作"正在翻译"提示）、失败、中文源
 const PLACEHOLDER_TITLE = '译文：正在翻译…';
 const FAILED_TITLE = '译文：（翻译失败）';
@@ -159,7 +174,7 @@ async function translateSelection(text) {
     setMenuTitle(ZH_SOURCE_TITLE);
     return;
   }
-  showTranslation(result.text);
+  showTranslation(result);
 }
 
 async function getTranslation(text) {
@@ -264,10 +279,17 @@ async function sendCopyMessage(text) {
 
 // ---------- 菜单显示 ----------
 
-// 短译文一级直显；长译文一级显示摘要（子菜单箭头由 Chrome 根据可见子项自动添加）
-function showTranslation(translation) {
+// 短译文一级直显；长译文一级显示摘要（子菜单箭头由 Chrome 根据可见子项自动添加）；
+// 单词且接口带词典数据时进入词典模式（按词性分组展示多个释义）
+function showTranslation(result) {
   // 菜单标题不支持换行，多句译文统一压成一行
-  const text = translation.replace(/\s*\n+\s*/g, ' ').trim();
+  const text = String(result.text).replace(/\s*\n+\s*/g, ' ').trim();
+
+  if (Array.isArray(result.dict)) {
+    showDictionaryMenu(text, result.dict);
+    return;
+  }
+
   const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
   const { truncated } = truncateByWidth(text, budget);
 
@@ -277,16 +299,32 @@ function showTranslation(translation) {
     return;
   }
 
-  setMenuTitle(buildSummaryTitle(text));
+  setMenuTitle(buildPreviewTitle(text));
   const { lines, remainder } = splitIntoLines(text, SUBMENU_LINE_WIDTH, SUBMENU_MAX_LINES);
   showSubmenu(lines, remainder !== null);
   console.log('[RightLingo] 长译文进入二级菜单:', lines.length, '行, 溢出:', remainder !== null);
 }
 
-function buildSummaryTitle(text) {
+// 词典模式：一级仍显示主译文；二级每个词性一行（名: 偶像；偶像形象），最多 4 行。
+// 更多词性不再展开——"在 Google 翻译中翻译"就是看完整词典和例句的出口。
+function showDictionaryMenu(text, dict) {
+  setMenuTitle(buildPreviewTitle(text));
+  const lines = [];
+  for (const entry of dict) {
+    if (lines.length >= SUBMENU_MAX_LINES) break;
+    const pos = POS_LABELS[entry.pos.toLowerCase()] || entry.pos;
+    const raw = `${pos ? pos + '：' : ''}${entry.senses.join('；')}`;
+    const { text: line, truncated } = truncateByWidth(raw, SUBMENU_LINE_WIDTH);
+    lines.push(truncated ? `${line}…` : line);
+  }
+  showSubmenu(lines, false);
+  console.log('[RightLingo] 词典模式:', lines.length, '个词性');
+}
+
+function buildPreviewTitle(text) {
   const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
-  const { text: preview } = truncateByWidth(text, budget);
-  return `${TITLE_PREFIX}${preview}…`;
+  const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
+  return `${TITLE_PREFIX}${preview}${truncated ? '…' : ''}`;
 }
 
 function showSubmenu(lines, hasOverflow) {
