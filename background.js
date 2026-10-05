@@ -12,14 +12,19 @@ const TITLE_PREFIX = '译文：';
 // 这个上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
 const PREVIEW_MAX_WIDTH = 80;
 
-// 二级菜单：固定 8 个行槽位 + 1 个溢出提示项。
+// 二级菜单：固定行槽位 + 溢出提示 + 分隔线 + 操作项。
 // 菜单标题不支持换行，"每行一个菜单项"是多行译文的唯一显示方式（PRD §3.3）。
-const SUBMENU_MAX_LINES = 8;
+// 行数刻意偏少：长文本阅读交给"在 Google 翻译中翻译"跳网页，菜单里只管预览。
+const SUBMENU_MAX_LINES = 4;
 const SUBMENU_LINE_WIDTH = 72; // 二级行宽上限（显示宽度），比一级略窄，给子菜单缩进留余量
 const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_LINES }, (_, i) => `rl-line-${i}`);
 const SUBMENU_OVERFLOW_ID = 'rl-line-more';
 const OVERFLOW_TITLE = '… 查看完整译文'; // 点击 = 复制完整译文
 const SUBMENU_SEPARATOR_ID = 'rl-sep';
+const SUBMENU_GOOGLE_ID = 'rl-gtranslate';
+const GOOGLE_ITEM_TITLE = '在 Google 翻译中翻译';
+const GOOGLE_TRANSLATE_URL = 'https://translate.google.com/';
+const GOOGLE_TRANSLATE_MAX_CHARS = 2000; // 跳转 URL 里带原文，超长截断
 const SUBMENU_COPY_ID = 'rl-copy';
 const COPY_TITLE = '复制完整译文';
 // 点击这些项都复制完整译文（一级对长文本只显示摘要，但复制的是全文）
@@ -52,6 +57,11 @@ function probeMenusThenCreate() {
   });
 }
 
+// 扩展安装/更新时强制重建菜单（新增菜单项只改 create 的话，已有安装探测到菜单存在会跳过创建）
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.removeAll(() => createMenus());
+});
+
 function createMenus() {
   // 固定槽位结构：只在缺失时创建一次，之后所有变化都走 update（改标题/可见性）
   createItem({ id: MENU_ROOT_ID, title: 'RightLingo', contexts: ['selection'] });
@@ -71,10 +81,18 @@ function createMenus() {
     contexts: ['selection'],
     visible: false,
   });
+  // 菜单项按创建顺序显示：译文行 → 溢出提示 → 分隔线 → Google 翻译 → 复制
   createItem({
     id: SUBMENU_SEPARATOR_ID,
     parentId: MENU_ROOT_ID,
     type: 'separator',
+    contexts: ['selection'],
+    visible: false,
+  });
+  createItem({
+    id: SUBMENU_GOOGLE_ID,
+    parentId: MENU_ROOT_ID,
+    title: GOOGLE_ITEM_TITLE,
     contexts: ['selection'],
     visible: false,
   });
@@ -164,6 +182,10 @@ chrome.contextMenus.onClicked.addListener((info) => {
 });
 
 async function handleMenuClick(info) {
+  if (info.menuItemId === SUBMENU_GOOGLE_ID) {
+    await openInGoogleTranslate(info);
+    return;
+  }
   if (!COPYABLE_IDS.has(info.menuItemId)) return;
   console.log('[RightLingo] 菜单点击:', info.menuItemId);
   const original = (info.selectionText || '').trim().slice(0, MAX_TRANSLATION_CHARS);
@@ -182,6 +204,15 @@ async function handleMenuClick(info) {
   const textToCopy = result.srcLang.startsWith('zh') ? original : result.translation;
   await copyToClipboard(textToCopy);
   console.log('[RightLingo] 已复制译文到剪贴板');
+}
+
+// 在 Google 翻译网页版中打开选中的原文（长文本的完整阅读出口）
+async function openInGoogleTranslate(info) {
+  console.log('[RightLingo] 菜单点击:', SUBMENU_GOOGLE_ID);
+  const text = (info.selectionText || '').trim().slice(0, GOOGLE_TRANSLATE_MAX_CHARS);
+  if (!text) return;
+  const params = new URLSearchParams({ sl: 'auto', tl: 'zh-CN', text, op: 'translate' });
+  await chrome.tabs.create({ url: `${GOOGLE_TRANSLATE_URL}?${params}` });
 }
 
 async function copyToClipboard(text) {
@@ -267,6 +298,7 @@ function showSubmenu(lines, hasOverflow) {
   });
   updateMenuItem(SUBMENU_OVERFLOW_ID, { title: OVERFLOW_TITLE, visible: hasOverflow });
   updateMenuItem(SUBMENU_SEPARATOR_ID, { visible: true });
+  updateMenuItem(SUBMENU_GOOGLE_ID, { title: GOOGLE_ITEM_TITLE, visible: true });
   updateMenuItem(SUBMENU_COPY_ID, { title: COPY_TITLE, visible: true });
 }
 
@@ -275,6 +307,7 @@ function hideSubmenu() {
     ...SUBMENU_LINE_IDS,
     SUBMENU_OVERFLOW_ID,
     SUBMENU_SEPARATOR_ID,
+    SUBMENU_GOOGLE_ID,
     SUBMENU_COPY_ID,
   ]) {
     updateMenuItem(id, { visible: false });
