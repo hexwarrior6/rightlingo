@@ -227,7 +227,6 @@ async function handleMenuClick(info) {
     return;
   }
   if (!COPYABLE_IDS.has(info.menuItemId)) return;
-  console.log('[RightLingo] 菜单点击:', info.menuItemId);
   const original = (info.selectionText || '').trim().slice(0, MAX_TRANSLATION_CHARS);
   if (!original) return;
 
@@ -251,12 +250,10 @@ async function handleMenuClick(info) {
       ? `${original}\n${textToCopy}`
       : textToCopy;
   await copyToClipboard(copyText);
-  console.log('[RightLingo] 已复制到剪贴板');
 }
 
 // 在 Google 翻译网页版中打开选中的原文（长文本的完整阅读出口）
 async function openInGoogleTranslate(info) {
-  console.log('[RightLingo] 菜单点击:', SUBMENU_GOOGLE_ID);
   const text = (info.selectionText || '').trim().slice(0, GOOGLE_TRANSLATE_MAX_CHARS);
   if (!text) return;
   const params = new URLSearchParams({ sl: 'auto', tl: 'zh-CN', text, op: 'translate' });
@@ -335,7 +332,6 @@ function showTranslation(result) {
   setMenuTitle(buildPreviewTitle(text));
   const { lines, remainder } = splitIntoLines(text, SUBMENU_LINE_WIDTH, settings.submenuLines);
   showSubmenu(lines, remainder !== null);
-  console.log('[RightLingo] 长译文进入二级菜单:', lines.length, '行, 溢出:', remainder !== null);
 }
 
 // 词典模式：一级仍显示主译文；二级每个词性一行（名: 偶像；偶像形象），最多 4 行。
@@ -351,7 +347,6 @@ function showDictionaryMenu(text, dict) {
     lines.push(truncated ? `${line}…` : line);
   }
   showSubmenu(lines, false);
-  console.log('[RightLingo] 词典模式:', lines.length, '个词性');
 }
 
 function buildPreviewTitle(text) {
@@ -398,8 +393,6 @@ function setMenuTitle(title) {
     const err = chrome.runtime.lastError;
     if (err) {
       console.error('[RightLingo] 更新菜单失败:', err.message);
-      return;
     }
-    console.log('[RightLingo] 菜单已更新:', title);
   });
 }

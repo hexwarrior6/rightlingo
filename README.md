@@ -111,9 +111,9 @@ rightlingo/
 
 ### 查看日志
 
-- 后台：`chrome://extensions` → RightLingo → 「Service Worker」→ inspect
-  （翻译请求、结果、失败都会打 `[RightLingo]` 日志）
-- 页面：网页 F12 → Console → `[RightLingo] 已上报选中文本: …`
+正常路径不打日志。出错时会以 `[RightLingo]` 前缀输出到控制台，用于诊断：
+后台错误在 `chrome://extensions` → RightLingo → 「Service Worker」→ inspect 查看
+（翻译失败、复制失败、菜单创建/更新失败会记录；页面控制台保持安静）。
 
 ## 关于菜单能显示多少字
 

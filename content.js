@@ -32,12 +32,11 @@ function reportSelection() {
   const text = getSelectedText();
   if (!text) return;
   resetPending = false;
-  sendMessage({ type: 'selection', text: text.slice(0, MAX_SELECTION_LENGTH) }).then(() => {
-    // 只有当这个选区仍然是当前选区时才记为"已上报"，拖选过程中的中间状态不算
-    if (getSelectedText() === text) lastReported = text;
-  });
-  console.log('[RightLingo] 已上报选中文本:', text.slice(0, 50));
-}
+    sendMessage({ type: 'selection', text: text.slice(0, MAX_SELECTION_LENGTH) }).then(() => {
+      // 只有当这个选区仍然是当前选区时才记为"已上报"，拖选过程中的中间状态不算
+      if (getSelectedText() === text) lastReported = text;
+    });
+  }
 
 function reportReset() {
   resetPending = true;
