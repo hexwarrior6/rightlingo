@@ -4,6 +4,7 @@
 
 import { translateText } from './translate.js';
 import { displayWidth, truncateByWidth, splitIntoLines } from './display.js';
+import { DEFAULT_SETTINGS, loadSettings } from './settings.js';
 
 const MENU_ROOT_ID = 'rl-root';
 const TITLE_PREFIX = '译文：';
@@ -15,9 +16,10 @@ const PREVIEW_MAX_WIDTH = 80;
 // 二级菜单：固定行槽位 + 溢出提示 + 分隔线 + 操作项。
 // 菜单标题不支持换行，"每行一个菜单项"是多行译文的唯一显示方式（PRD §3.3）。
 // 行数刻意偏少：长文本阅读交给"在 Google 翻译中翻译"跳网页，菜单里只管预览。
-const SUBMENU_MAX_LINES = 4;
+// 槽位池固定为设置允许的最大行数，实际显示行数由设置 submenuLines 控制。
+const SUBMENU_MAX_SLOTS = 6;
 const SUBMENU_LINE_WIDTH = 72; // 二级行宽上限（显示宽度），比一级略窄，给子菜单缩进留余量
-const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_LINES }, (_, i) => `rl-line-${i}`);
+const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_SLOTS }, (_, i) => `rl-line-${i}`);
 const SUBMENU_OVERFLOW_ID = 'rl-line-more';
 const OVERFLOW_TITLE = '… 查看完整译文'; // 点击 = 复制完整译文
 const SUBMENU_SEPARATOR_ID = 'rl-sep';
@@ -50,10 +52,10 @@ const POS_LABELS = {
   numeral: '数',
 };
 
-// 状态文案：新选区手势开始时的占位符（兼作"正在翻译"提示）、失败、中文源
+// 状态文案：新选区手势开始时的占位符（兼作"正在翻译"提示）、失败、与目标语言相同
 const PLACEHOLDER_TITLE = '译文：正在翻译…';
 const FAILED_TITLE = '译文：（翻译失败）';
-const ZH_SOURCE_TITLE = '译文：（原文已是中文）';
+const SAME_LANG_TITLE = '译文：（选中文本已是目标语言）';
 
 // 菜单最多能显示约 40 个汉字，超出部分翻译了也显示不了
 // （"复制完整译文"是阶段五的能力），先对送翻译的文本设上限。
@@ -129,6 +131,20 @@ function createItem(props) {
   });
 }
 
+// ---------- 设置 ----------
+// 默认值见 settings.js，存 chrome.storage.sync（跟随账号漫游）。
+// settingsReady：SW 冷启动时设置是异步加载的，入口处 await 它避免拿到默认值误判。
+let settings = { ...DEFAULT_SETTINGS };
+const settingsReady = loadSettings().then((stored) => {
+  settings = stored;
+});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'sync') return;
+  for (const [key, { newValue }] of Object.entries(changes)) {
+    if (key in settings) settings[key] = newValue;
+  }
+});
+
 // 请求序号：拖选会连续触发多次翻译，响应到达顺序不保证，
 // 只认最新一次请求的结果，过期的直接丢弃。
 let requestSeq = 0;
@@ -146,13 +162,14 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 
 async function translateSelection(text) {
+  await settingsReady;
   const trimmed = text.trim().slice(0, MAX_TRANSLATION_CHARS);
   if (!trimmed) return;
   const seq = ++requestSeq;
 
   let result;
   try {
-    result = await getTranslation(trimmed);
+    result = await getTranslation(trimmed, settings.targetLang);
   } catch (err) {
     console.error('[RightLingo] 翻译失败:', err.message);
     if (seq === requestSeq) {
@@ -169,20 +186,22 @@ async function translateSelection(text) {
     .set({ last: { original: trimmed, translation: result.text, srcLang: result.srcLang } })
     .catch(() => {});
 
-  if (result.srcLang.startsWith('zh')) {
+  // 选中文本本身就是目标语言时跳过翻译（目标语言为中文时即"中文跳过"）
+  if (result.srcLang.startsWith(settings.targetLang.split('-')[0])) {
     hideSubmenu();
-    setMenuTitle(ZH_SOURCE_TITLE);
+    setMenuTitle(SAME_LANG_TITLE);
     return;
   }
   showTranslation(result);
 }
 
-async function getTranslation(text) {
-  const cached = translationCache.get(text);
+async function getTranslation(text, targetLang) {
+  const cacheKey = `${targetLang}:${text}`; // 缓存键带目标语言，切换语言后不会命中旧结果
+  const cached = translationCache.get(cacheKey);
   if (cached) return cached;
-  const result = await translateText(text);
+  const result = await translateText(text, targetLang);
   if (translationCache.size >= CACHE_MAX_ENTRIES) translationCache.clear();
-  translationCache.set(text, result);
+  translationCache.set(cacheKey, result);
   return result;
 }
 
@@ -197,6 +216,7 @@ chrome.contextMenus.onClicked.addListener((info) => {
 });
 
 async function handleMenuClick(info) {
+  await settingsReady;
   if (info.menuItemId === SUBMENU_GOOGLE_ID) {
     await openInGoogleTranslate(info);
     return;
@@ -213,12 +233,20 @@ async function handleMenuClick(info) {
   if (last && last.original === original) {
     result = last;
   } else {
-    result = await getTranslation(original);
+    result = await getTranslation(original, settings.targetLang);
   }
 
-  const textToCopy = result.srcLang.startsWith('zh') ? original : result.translation;
-  await copyToClipboard(textToCopy);
-  console.log('[RightLingo] 已复制译文到剪贴板');
+  const baseLang = settings.targetLang.split('-')[0];
+  const textToCopy = result.srcLang.startsWith(baseLang)
+    ? original
+    : result.translation;
+  // 设置为"原文 + 译文"时拼两行（原文与译文相同时不重复）
+  const copyText =
+    settings.copyMode === 'original+translation' && textToCopy !== original
+      ? `${original}\n${textToCopy}`
+      : textToCopy;
+  await copyToClipboard(copyText);
+  console.log('[RightLingo] 已复制到剪贴板');
 }
 
 // 在 Google 翻译网页版中打开选中的原文（长文本的完整阅读出口）
@@ -285,7 +313,7 @@ function showTranslation(result) {
   // 菜单标题不支持换行，多句译文统一压成一行
   const text = String(result.text).replace(/\s*\n+\s*/g, ' ').trim();
 
-  if (Array.isArray(result.dict)) {
+  if (Array.isArray(result.dict) && settings.dictEnabled) {
     showDictionaryMenu(text, result.dict);
     return;
   }
@@ -300,7 +328,7 @@ function showTranslation(result) {
   }
 
   setMenuTitle(buildPreviewTitle(text));
-  const { lines, remainder } = splitIntoLines(text, SUBMENU_LINE_WIDTH, SUBMENU_MAX_LINES);
+  const { lines, remainder } = splitIntoLines(text, SUBMENU_LINE_WIDTH, settings.submenuLines);
   showSubmenu(lines, remainder !== null);
   console.log('[RightLingo] 长译文进入二级菜单:', lines.length, '行, 溢出:', remainder !== null);
 }
@@ -311,7 +339,7 @@ function showDictionaryMenu(text, dict) {
   setMenuTitle(buildPreviewTitle(text));
   const lines = [];
   for (const entry of dict) {
-    if (lines.length >= SUBMENU_MAX_LINES) break;
+    if (lines.length >= settings.submenuLines) break;
     const pos = POS_LABELS[entry.pos.toLowerCase()] || entry.pos;
     const raw = `${pos ? pos + '：' : ''}${entry.senses.join('；')}`;
     const { text: line, truncated } = truncateByWidth(raw, SUBMENU_LINE_WIDTH);

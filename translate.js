@@ -10,14 +10,14 @@ const TRANSLATE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single'
 const TARGET_LANGUAGE = 'zh-CN';
 const REQUEST_TIMEOUT_MS = 5000;
 
-// 翻译一段文本，返回 { text, srcLang, dict }；失败时抛错。
+// 翻译一段文本到目标语言，返回 { text, srcLang, dict }；失败时抛错。
 // dict：单词的词典释义（按词性分组），接口没返回词典数据时为 null，形如
 //       [{ pos: 'adjective', senses: ['标志性的', ...] }, ...]
-export async function translateText(text) {
+export async function translateText(text, targetLang = TARGET_LANGUAGE) {
   const params = new URLSearchParams({
     client: 'gtx',
     sl: 'auto',
-    tl: TARGET_LANGUAGE,
+    tl: targetLang,
     dt: 't',
     q: text,
   });

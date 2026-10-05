@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>RightLingo 设置</title>
+  <style>
+    body {
+      font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      max-width: 560px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #202124;
+    }
+    h1 { font-size: 20px; }
+    .row { margin: 20px 0; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; }
+    label.inline { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+    .hint { color: #5f6368; font-size: 12px; margin-top: 4px; }
+    select, input[type="number"] {
+      padding: 6px 8px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+    }
+    button {
+      padding: 6px 14px;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font: inherit;
+    }
+    button:hover { background: #f1f3f4; }
+    #status { margin-left: 10px; color: #188038; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>RightLingo 设置</h1>
+
+  <div class="row">
+    <label for="targetLang">目标语言</label>
+    <select id="targetLang">
+      <option value="zh-CN">简体中文</option>
+      <option value="zh-TW">繁體中文</option>
+      <option value="en">English</option>
+      <option value="ja">日本語</option>
+    </select>
+    <div class="hint">选中文本本身就是目标语言时，右键菜单会提示而不翻译（目标语言为中文时即"中文跳过"）。</div>
+  </div>
+
+  <div class="row">
+    <label for="submenuLines">二级菜单行数</label>
+    <input type="number" id="submenuLines" min="1" max="6" step="1" />
+    <div class="hint">长译文在二级菜单里最多显示几行（1–6）。行数刻意偏少：完整阅读请用"在 Google 翻译中翻译"。</div>
+  </div>
+
+  <div class="row">
+    <label class="inline">
+      <input type="checkbox" id="dictEnabled" />
+      词典模式（选中单词时显示分词性的多个释义）
+    </label>
+  </div>
+
+  <div class="row">
+    <label for="copyMode">点击译文时复制</label>
+    <select id="copyMode">
+      <option value="translation">仅译文</option>
+      <option value="original+translation">原文 + 译文</option>
+    </select>
+  </div>
+
+  <div class="row">
+    <button id="reset">恢复默认</button>
+    <span id="status"></span>
+  </div>
+
+  <script src="options.js" type="module"></script>
+</body>
+</html>
