@@ -4,75 +4,244 @@
   <meta charset="utf-8" />
   <title>RightLingo 设置</title>
   <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f1f1f;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --divider: #f1f3f4;
+      --accent: #1a73e8;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1b1b1d;
+        --card: #262628;
+        --text: #e8eaed;
+        --muted: #9aa0a6;
+        --border: #3c4043;
+        --divider: #303134;
+        --accent: #8ab4f8;
+      }
+    }
+    * { box-sizing: border-box; }
     body {
+      margin: 0;
+      padding: 48px 20px 64px;
+      background: var(--bg);
+      color: var(--text);
       font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-      max-width: 560px;
-      margin: 40px auto;
-      padding: 0 20px;
-      color: #202124;
+      -webkit-font-smoothing: antialiased;
     }
-    h1 { font-size: 20px; }
-    .row { margin: 20px 0; }
-    label { display: block; font-weight: 600; margin-bottom: 6px; }
-    label.inline { display: flex; align-items: center; gap: 8px; font-weight: 400; }
-    .hint { color: #5f6368; font-size: 12px; margin-top: 4px; }
-    select, input[type="number"] {
-      padding: 6px 8px;
-      border: 1px solid #dadce0;
-      border-radius: 6px;
+    .wrap { max-width: 600px; margin: 0 auto; }
+
+    header { margin-bottom: 24px; }
+    header h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+    header .sub { color: var(--muted); font-size: 13px; }
+    header .ver { opacity: 0.7; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .card h2 {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 0;
+      padding: 14px 18px 0;
+      letter-spacing: 1px;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+    }
+    .row + .row { border-top: 1px solid var(--divider); }
+    .row .label { min-width: 0; }
+    .row .title { font-weight: 500; }
+    .row .hint { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    select {
       font: inherit;
-      background: #fff;
-    }
-    button {
-      padding: 6px 14px;
-      border: 1px solid #dadce0;
-      border-radius: 6px;
-      background: #fff;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
       cursor: pointer;
-      font: inherit;
+      flex: none;
     }
-    button:hover { background: #f1f3f4; }
-    #status { margin-left: 10px; color: #188038; font-size: 12px; }
+
+    /* 开关 */
+    .switch { position: relative; width: 40px; height: 22px; flex: none; }
+    .switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+    .switch .track,
+    .switch .knob { position: absolute; pointer-events: none; transition: all 0.18s; }
+    .switch .track { inset: 0; background: var(--border); border-radius: 999px; }
+    .switch .knob {
+      top: 2px; left: 2px; width: 18px; height: 18px;
+      background: #fff; border-radius: 50%;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    .switch input:checked ~ .track { background: var(--accent); }
+    .switch input:checked ~ .knob { transform: translateX(18px); }
+
+    /* 分段选择 */
+    .segmented {
+      display: inline-flex;
+      gap: 2px;
+      padding: 2px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      flex: none;
+    }
+    .segmented button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 7px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.12s, color 0.12s;
+    }
+    .segmented button:hover { color: var(--text); }
+    .segmented button.active {
+      background: var(--card);
+      color: var(--text);
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    }
+    .segmented.num button { min-width: 30px; padding: 5px 0; text-align: center; }
+
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+    #reset {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    #reset:hover { color: var(--text); background: var(--divider); }
+    #status {
+      color: var(--accent);
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    #status.show { opacity: 1; }
   </style>
 </head>
 <body>
-  <h1>RightLingo 设置</h1>
+  <div class="wrap">
+    <header>
+      <h1>RightLingo 设置</h1>
+      <div class="sub">原生右键翻译 · <span class="ver">v<span id="version"></span></span></div>
+    </header>
 
-  <div class="row">
-    <label for="targetLang">目标语言</label>
-    <select id="targetLang">
-      <option value="zh-CN">简体中文</option>
-      <option value="zh-TW">繁體中文</option>
-      <option value="en">English</option>
-      <option value="ja">日本語</option>
-    </select>
-    <div class="hint">选中文本本身就是目标语言时，右键菜单会提示而不翻译（目标语言为中文时即"中文跳过"）。</div>
-  </div>
+    <div class="card">
+      <h2>翻译</h2>
+      <div class="row">
+        <div class="label">
+          <div class="title">目标语言</div>
+          <div class="hint">选中文本本身就是目标语言时提示而不翻译；目标设为英文后，中文也能翻译</div>
+        </div>
+        <select id="targetLang">
+          <option value="zh-CN">简体中文</option>
+          <option value="zh-TW">繁體中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+        </select>
+      </div>
+      <div class="row">
+        <div class="label">
+          <div class="title">词典模式</div>
+          <div class="hint">选中单词时显示分词性的多个释义</div>
+        </div>
+        <span class="switch">
+          <input type="checkbox" id="dictEnabled" />
+          <span class="track"></span>
+          <span class="knob"></span>
+        </span>
+      </div>
+    </div>
 
-  <div class="row">
-    <label for="submenuLines">二级菜单行数</label>
-    <input type="number" id="submenuLines" min="1" max="6" step="1" />
-    <div class="hint">长译文在二级菜单里最多显示几行（1–6）。行数刻意偏少：完整阅读请用"在 Google 翻译中翻译"。</div>
-  </div>
+    <div class="card">
+      <h2>菜单显示</h2>
+      <div class="row">
+        <div class="label">
+          <div class="title">一级菜单摘要长度</div>
+          <div class="hint">超过该长度的译文进入"摘要 + 二级菜单"</div>
+        </div>
+        <div class="segmented" id="previewLength">
+          <button data-value="short">短</button>
+          <button data-value="medium">中</button>
+          <button data-value="long">长</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="label">
+          <div class="title">二级菜单行数</div>
+          <div class="hint">长译文最多显示几行；完整阅读用"在 Google 翻译中翻译"</div>
+        </div>
+        <div class="segmented num" id="submenuLines">
+          <button data-value="1">1</button>
+          <button data-value="2">2</button>
+          <button data-value="3">3</button>
+          <button data-value="4">4</button>
+          <button data-value="5">5</button>
+          <button data-value="6">6</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="label">
+          <div class="title">"在 Google 翻译中翻译"</div>
+          <div class="hint">长文本二级菜单底部的网页跳转入口</div>
+        </div>
+        <span class="switch">
+          <input type="checkbox" id="showGoogleItem" />
+          <span class="track"></span>
+          <span class="knob"></span>
+        </span>
+      </div>
+    </div>
 
-  <div class="row">
-    <label class="inline">
-      <input type="checkbox" id="dictEnabled" />
-      词典模式（选中单词时显示分词性的多个释义）
-    </label>
-  </div>
+    <div class="card">
+      <h2>复制</h2>
+      <div class="row">
+        <div class="label">
+          <div class="title">点击译文时复制</div>
+          <div class="hint">"原文 + 译文"会复制两行，适合背单词、记笔记</div>
+        </div>
+        <div class="segmented" id="copyMode">
+          <button data-value="translation">仅译文</button>
+          <button data-value="original+translation">原文 + 译文</button>
+        </div>
+      </div>
+    </div>
 
-  <div class="row">
-    <label for="copyMode">点击译文时复制</label>
-    <select id="copyMode">
-      <option value="translation">仅译文</option>
-      <option value="original+translation">原文 + 译文</option>
-    </select>
-  </div>
-
-  <div class="row">
-    <button id="reset">恢复默认</button>
-    <span id="status"></span>
+    <footer>
+      <button id="reset">恢复默认</button>
+      <span id="status">已保存</span>
+    </footer>
   </div>
 
   <script src="options.js" type="module"></script>

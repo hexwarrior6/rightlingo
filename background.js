@@ -8,10 +8,11 @@ import { DEFAULT_SETTINGS, loadSettings } from './settings.js';
 
 const MENU_ROOT_ID = 'rl-root';
 const TITLE_PREFIX = '译文：';
-// 一级菜单预览的显示宽度上限：CJK/全角按 2 计、其余按 1 计，80 ≈ 40 个汉字。
+// 一级菜单预览的显示宽度上限：CJK/全角按 2 计、其余按 1 计。
 // Chrome 对菜单标题没有字符数硬上限，会把菜单撑宽（有系统最大值），超宽才按像素截断；
-// 这个上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
-const PREVIEW_MAX_WIDTH = 80;
+// 上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
+// 具体档位由设置 previewLength 控制（短/中/长）。
+const PREVIEW_WIDTH_BY_LEVEL = { short: 60, medium: 80, long: 100 };
 
 // 二级菜单：固定行槽位 + 溢出提示 + 分隔线 + 操作项。
 // 菜单标题不支持换行，"每行一个菜单项"是多行译文的唯一显示方式（PRD §3.3）。
@@ -144,6 +145,10 @@ chrome.storage.onChanged.addListener((changes, area) => {
     if (key in settings) settings[key] = newValue;
   }
 });
+
+function previewMaxWidth() {
+  return PREVIEW_WIDTH_BY_LEVEL[settings.previewLength] || PREVIEW_WIDTH_BY_LEVEL.medium;
+}
 
 // 请求序号：拖选会连续触发多次翻译，响应到达顺序不保证，
 // 只认最新一次请求的结果，过期的直接丢弃。
@@ -318,7 +323,7 @@ function showTranslation(result) {
     return;
   }
 
-  const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
+  const budget = previewMaxWidth() - displayWidth(TITLE_PREFIX);
   const { truncated } = truncateByWidth(text, budget);
 
   if (!truncated) {
@@ -350,7 +355,7 @@ function showDictionaryMenu(text, dict) {
 }
 
 function buildPreviewTitle(text) {
-  const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
+  const budget = previewMaxWidth() - displayWidth(TITLE_PREFIX);
   const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
   return `${TITLE_PREFIX}${preview}${truncated ? '…' : ''}`;
 }
@@ -364,7 +369,10 @@ function showSubmenu(lines, hasOverflow) {
   });
   updateMenuItem(SUBMENU_OVERFLOW_ID, { title: OVERFLOW_TITLE, visible: hasOverflow });
   updateMenuItem(SUBMENU_SEPARATOR_ID, { visible: true });
-  updateMenuItem(SUBMENU_GOOGLE_ID, { title: GOOGLE_ITEM_TITLE, visible: true });
+  updateMenuItem(SUBMENU_GOOGLE_ID, {
+    title: GOOGLE_ITEM_TITLE,
+    visible: settings.showGoogleItem,
+  });
   updateMenuItem(SUBMENU_COPY_ID, { title: COPY_TITLE, visible: true });
 }
 
