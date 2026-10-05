@@ -18,7 +18,17 @@ const SUBMENU_MAX_LINES = 8;
 const SUBMENU_LINE_WIDTH = 72; // 二级行宽上限（显示宽度），比一级略窄，给子菜单缩进留余量
 const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_LINES }, (_, i) => `rl-line-${i}`);
 const SUBMENU_OVERFLOW_ID = 'rl-line-more';
-const OVERFLOW_TITLE = '… 查看完整译文'; // 点击行为属于阶段五的复制功能
+const OVERFLOW_TITLE = '… 查看完整译文'; // 点击 = 复制完整译文
+const SUBMENU_SEPARATOR_ID = 'rl-sep';
+const SUBMENU_COPY_ID = 'rl-copy';
+const COPY_TITLE = '复制完整译文';
+// 点击这些项都复制完整译文（一级对长文本只显示摘要，但复制的是全文）
+const COPYABLE_IDS = new Set([
+  MENU_ROOT_ID,
+  ...SUBMENU_LINE_IDS,
+  SUBMENU_OVERFLOW_ID,
+  SUBMENU_COPY_ID,
+]);
 
 // 状态文案：新选区手势开始时的占位符（兼作"正在翻译"提示）、失败、中文源
 const PLACEHOLDER_TITLE = '译文：正在翻译…';
@@ -58,6 +68,20 @@ function createMenus() {
     id: SUBMENU_OVERFLOW_ID,
     parentId: MENU_ROOT_ID,
     title: OVERFLOW_TITLE,
+    contexts: ['selection'],
+    visible: false,
+  });
+  createItem({
+    id: SUBMENU_SEPARATOR_ID,
+    parentId: MENU_ROOT_ID,
+    type: 'separator',
+    contexts: ['selection'],
+    visible: false,
+  });
+  createItem({
+    id: SUBMENU_COPY_ID,
+    parentId: MENU_ROOT_ID,
+    title: COPY_TITLE,
     contexts: ['selection'],
     visible: false,
   });
@@ -107,6 +131,11 @@ async function translateSelection(text) {
 
   if (seq !== requestSeq) return; // 已有更新的选区，这份结果过期了
 
+  // 存一份最近译文到 storage.session（SW 被点击唤醒后内存缓存已空，点击复制要用）
+  chrome.storage.session
+    .set({ last: { original: trimmed, translation: result.text, srcLang: result.srcLang } })
+    .catch(() => {});
+
   if (result.srcLang.startsWith('zh')) {
     hideSubmenu();
     setMenuTitle(ZH_SOURCE_TITLE);
@@ -122,6 +151,48 @@ async function getTranslation(text) {
   if (translationCache.size >= CACHE_MAX_ENTRIES) translationCache.clear();
   translationCache.set(text, result);
   return result;
+}
+
+// ---------- 点击复制（阶段五） ----------
+
+// 点击任何译文相关菜单项 = 复制完整译文（PRD §6：点击译文即复制，省一个"复制"菜单项）。
+// 复制无视觉反馈（菜单已随点击关闭），粘贴即可验证。
+chrome.contextMenus.onClicked.addListener((info) => {
+  handleMenuClick(info).catch((err) => {
+    console.error('[RightLingo] 复制失败:', err.message);
+  });
+});
+
+async function handleMenuClick(info) {
+  if (!COPYABLE_IDS.has(info.menuItemId)) return;
+  const original = (info.selectionText || '').trim().slice(0, MAX_TRANSLATION_CHARS);
+  if (!original) return;
+
+  // 点击会唤醒 SW（内存缓存清空），优先用 storage.session 里的最近一次译文；
+  // 对不上（比如浏览器重启过）就现场重翻一次。
+  const { last } = await chrome.storage.session.get('last');
+  let result;
+  if (last && last.original === original) {
+    result = last;
+  } else {
+    result = await getTranslation(original);
+  }
+
+  const textToCopy = result.srcLang.startsWith('zh') ? original : result.translation;
+  await copyToClipboard(textToCopy);
+  console.log('[RightLingo] 已复制译文到剪贴板');
+}
+
+async function copyToClipboard(text) {
+  // MV3 SW 无法直接写剪贴板（无焦点），由 offscreen 文档代劳
+  if (!(await chrome.offscreen.hasDocument())) {
+    await chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: ['CLIPBOARD'],
+      justification: '响应右键菜单的"复制译文"操作',
+    });
+  }
+  await chrome.runtime.sendMessage({ target: 'offscreen', type: 'copy', text });
 }
 
 // ---------- 菜单显示 ----------
@@ -159,10 +230,17 @@ function showSubmenu(lines, hasOverflow) {
     );
   });
   updateMenuItem(SUBMENU_OVERFLOW_ID, { title: OVERFLOW_TITLE, visible: hasOverflow });
+  updateMenuItem(SUBMENU_SEPARATOR_ID, { visible: true });
+  updateMenuItem(SUBMENU_COPY_ID, { title: COPY_TITLE, visible: true });
 }
 
 function hideSubmenu() {
-  for (const id of [...SUBMENU_LINE_IDS, SUBMENU_OVERFLOW_ID]) {
+  for (const id of [
+    ...SUBMENU_LINE_IDS,
+    SUBMENU_OVERFLOW_ID,
+    SUBMENU_SEPARATOR_ID,
+    SUBMENU_COPY_ID,
+  ]) {
     updateMenuItem(id, { visible: false });
   }
 }
