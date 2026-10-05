@@ -16,6 +16,8 @@ rightlingo/
 ├── settings.js      # 设置默认值与读取（options 页与后台共用）
 ├── options.html/js  # 设置页（工具栏图标右键 → "选项"打开）
 ├── offscreen.html/js# 隐藏的剪贴板执行页（SW 写不了剪贴板，由它代劳，官方 offscreen 模式）
+├── icons/           # 扩展图标：icon.svg 为设计源文件，icon16/32/48/128.png 由脚本导出
+├── tools/           # 开发脚本（export-icons.sh：SVG → 四尺寸 PNG，用无头 Chrome 渲染）
 └── docs/            # PRD 与文档
 ```
 

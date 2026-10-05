@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4C8DF6"/>
+      <stop offset="1" stop-color="#1A66E0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 容器：圆角方块（商店会裁成圆形，核心图形收在中央安全区内） -->
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#bg)"/>
+
+  <!-- 白色菜单面板 -->
+  <rect x="30" y="20" width="68" height="84" rx="14" fill="#ffffff"/>
+
+  <!-- 高亮的菜单项：译文行（浅蓝底 + "译" + 内容条） -->
+  <rect x="38" y="28" width="52" height="22" rx="7" fill="#DDE9FD"/>
+  <text x="48" y="39.5" fill="#1A66E0"
+        font-family="'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif"
+        font-size="15" font-weight="700" text-anchor="middle"
+        dominant-baseline="central">译</text>
+  <rect x="58" y="36" width="26" height="7" rx="3.5" fill="#1A66E0" opacity="0.55"/>
+
+  <!-- 普通菜单项：两根浅色条 -->
+  <rect x="38" y="58" width="52" height="9" rx="4.5" fill="#B4C9F2"/>
+  <rect x="38" y="75" width="34" height="9" rx="4.5" fill="#B4C9F2"/>
+
+  <!-- 光标箭头：微软官方 Fluent Cursor 路径（Windows 11 风格，白色填充黑色描边） -->
+  <g transform="translate(62 62) scale(1.9)">
+    <path d="M7.92098 2.29927C6.93571 1.53286 5.5 2.23498 5.5 3.48325V20.492C5.5 21.9142 7.2945 22.538 8.17661 21.4224L12.3676 16.1222C12.6806 15.7264 13.1574 15.4956 13.6619 15.4956H20.5143C21.9425 15.4956 22.5626 13.6885 21.4353 12.8116L7.92098 2.29927Z"
+          fill="#ffffff" stroke="#000000" stroke-width="1.6" stroke-linejoin="round"/>
+  </g>
+</svg>
