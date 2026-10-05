@@ -1,8 +1,9 @@
 // RightLingo Service Worker（MV3 后台）
-// 职责：管理原生右键菜单；接收选中文本，翻译后把译文写进菜单标题。
-// 管线：选中文字 → content script 上报 → SW 翻译并更新菜单 → 右键即可看到。
+// 职责：管理原生右键菜单；接收选中文本，翻译后按长度分流：
+// 短译文一级直显，长译文"一级摘要 + 二级菜单分行显示"。
 
 import { translateText } from './translate.js';
+import { displayWidth, truncateByWidth, splitIntoLines } from './display.js';
 
 const MENU_ROOT_ID = 'rl-root';
 const TITLE_PREFIX = '译文：';
@@ -11,35 +12,64 @@ const TITLE_PREFIX = '译文：';
 // 这个上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
 const PREVIEW_MAX_WIDTH = 80;
 
-// 新选区手势开始时先显示的占位符：保证菜单不残留上一次的内容，兼作"正在翻译"提示。
+// 二级菜单：固定 8 个行槽位 + 1 个溢出提示项。
+// 菜单标题不支持换行，"每行一个菜单项"是多行译文的唯一显示方式（PRD §3.3）。
+const SUBMENU_MAX_LINES = 8;
+const SUBMENU_LINE_WIDTH = 72; // 二级行宽上限（显示宽度），比一级略窄，给子菜单缩进留余量
+const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_LINES }, (_, i) => `rl-line-${i}`);
+const SUBMENU_OVERFLOW_ID = 'rl-line-more';
+const OVERFLOW_TITLE = '… 查看完整译文'; // 点击行为属于阶段五的复制功能
+
+// 状态文案：新选区手势开始时的占位符（兼作"正在翻译"提示）、失败、中文源
 const PLACEHOLDER_TITLE = '译文：正在翻译…';
 const FAILED_TITLE = '译文：（翻译失败）';
 const ZH_SOURCE_TITLE = '译文：（原文已是中文）';
 
-// 菜单最多只能显示约 40 个汉字，超过这个长度的部分翻译了也显示不了
-// （"复制完整译文"是后续阶段的能力），先对送翻译的文本设上限。
+// 菜单最多能显示约 40 个汉字，超出部分翻译了也显示不了
+// （"复制完整译文"是阶段五的能力），先对送翻译的文本设上限。
 const MAX_TRANSLATION_CHARS = 500;
 const CACHE_MAX_ENTRIES = 100;
 
 // SW 每次被唤醒都会重新执行顶层代码。
-// 菜单注册在浏览器里、跨 SW 重启持久存在，所以重复 create 会报 duplicate id，属预期，忽略即可。
-createMenus();
+// 菜单注册在浏览器里、跨 SW 重启持久存在：先用空 update 探测是否已存在，
+// 不存在（首次安装/扩展重载/浏览器重启后）才创建，避免每次唤醒都产生 duplicate id。
+probeMenusThenCreate();
+
+function probeMenusThenCreate() {
+  chrome.contextMenus.update(MENU_ROOT_ID, {}, () => {
+    if (!chrome.runtime.lastError) return; // 菜单还在，什么都不用做（标题也得以保留）
+    createMenus();
+  });
+}
 
 function createMenus() {
-  chrome.contextMenus.create(
-    {
-      id: MENU_ROOT_ID,
-      title: 'RightLingo',
-      // 只在用户选中了文字时才显示这一项
+  // 固定槽位结构：只在缺失时创建一次，之后所有变化都走 update（改标题/可见性）
+  createItem({ id: MENU_ROOT_ID, title: 'RightLingo', contexts: ['selection'] });
+  for (const id of SUBMENU_LINE_IDS) {
+    createItem({
+      id,
+      parentId: MENU_ROOT_ID,
+      title: '…', // title 必填（只有分隔线可省略）；槽位默认隐藏，标题随后由 update 覆盖
       contexts: ['selection'],
-    },
-    () => {
-      const err = chrome.runtime.lastError;
-      if (err && !/duplicate id/i.test(err.message)) {
-        console.error('[RightLingo] 创建菜单失败:', err.message);
-      }
+      visible: false,
+    });
+  }
+  createItem({
+    id: SUBMENU_OVERFLOW_ID,
+    parentId: MENU_ROOT_ID,
+    title: OVERFLOW_TITLE,
+    contexts: ['selection'],
+    visible: false,
+  });
+}
+
+function createItem(props) {
+  chrome.contextMenus.create(props, () => {
+    const err = chrome.runtime.lastError;
+    if (err) {
+      console.error('[RightLingo] 创建菜单失败:', err.message);
     }
-  );
+  });
 }
 
 // 请求序号：拖选会连续触发多次翻译，响应到达顺序不保证，
@@ -50,7 +80,8 @@ const translationCache = new Map(); // 原文 -> { text, srcLang }
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || typeof msg !== 'object') return;
   if (msg.type === 'selection-reset') {
-    // 新的选择手势开始：先把菜单重置为占位符，避免右键时残留上一次的内容
+    // 新的选择手势开始：先把菜单重置为占位符并收起二级菜单，避免残留上一次的内容
+    hideSubmenu();
     setMenuTitle(PLACEHOLDER_TITLE);
   } else if (msg.type === 'selection' && typeof msg.text === 'string') {
     translateSelection(msg.text);
@@ -67,17 +98,21 @@ async function translateSelection(text) {
     result = await getTranslation(trimmed);
   } catch (err) {
     console.error('[RightLingo] 翻译失败:', err.message);
-    if (seq === requestSeq) setMenuTitle(FAILED_TITLE);
+    if (seq === requestSeq) {
+      hideSubmenu();
+      setMenuTitle(FAILED_TITLE);
+    }
     return;
   }
 
   if (seq !== requestSeq) return; // 已有更新的选区，这份结果过期了
 
   if (result.srcLang.startsWith('zh')) {
+    hideSubmenu();
     setMenuTitle(ZH_SOURCE_TITLE);
     return;
   }
-  setMenuTitle(buildPreviewTitle(result.text));
+  showTranslation(result.text);
 }
 
 async function getTranslation(text) {
@@ -89,47 +124,55 @@ async function getTranslation(text) {
   return result;
 }
 
-// 近似的“显示宽度”：中日韩全角字符按 2 格、其余按 1 格。阶段三/四会复用并按实测微调。
-function charDisplayWidth(char) {
-  const code = char.codePointAt(0);
-  const isWide =
-    (code >= 0x1100 && code <= 0x115f) || // 谚文字母
-    (code >= 0x2e80 && code <= 0xa4cf) || // CJK 部首/标点/假名/汉字等
-    (code >= 0xac00 && code <= 0xd7a3) || // 谚文音节
-    (code >= 0xf900 && code <= 0xfaff) || // CJK 兼容表意文字
-    (code >= 0xfe30 && code <= 0xfe6f) || // CJK 兼容形式
-    (code >= 0xff00 && code <= 0xff60) || // 全角字符
-    (code >= 0xffe0 && code <= 0xffe6); // 全角符号补充
-  return isWide ? 2 : 1;
-}
+// ---------- 菜单显示 ----------
 
-function displayWidth(text) {
-  let width = 0;
-  for (const char of text) width += charDisplayWidth(char);
-  return width;
-}
-
-// 按显示宽度截断文本；for...of / Array.from 均按完整字符迭代，emoji 不会被截半
-function truncateByWidth(text, maxWidth) {
-  let width = 0;
-  const chars = Array.from(text);
-  for (let i = 0; i < chars.length; i++) {
-    width += charDisplayWidth(chars[i]);
-    if (width > maxWidth) {
-      return { text: chars.slice(0, i).join('').trimEnd(), truncated: true };
-    }
-  }
-  return { text, truncated: false };
-}
-
-function buildPreviewTitle(text) {
+// 短译文一级直显；长译文一级显示摘要（子菜单箭头由 Chrome 根据可见子项自动添加）
+function showTranslation(translation) {
+  // 菜单标题不支持换行，多句译文统一压成一行
+  const text = translation.replace(/\s*\n+\s*/g, ' ').trim();
   const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
-  const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
-  return `${TITLE_PREFIX}${preview}${truncated ? '…' : ''}`;
+  const { truncated } = truncateByWidth(text, budget);
+
+  if (!truncated) {
+    setMenuTitle(TITLE_PREFIX + text);
+    hideSubmenu();
+    return;
+  }
+
+  setMenuTitle(buildSummaryTitle(text));
+  const { lines, remainder } = splitIntoLines(text, SUBMENU_LINE_WIDTH, SUBMENU_MAX_LINES);
+  showSubmenu(lines, remainder !== null);
+  console.log('[RightLingo] 长译文进入二级菜单:', lines.length, '行, 溢出:', remainder !== null);
+}
+
+function buildSummaryTitle(text) {
+  const budget = PREVIEW_MAX_WIDTH - displayWidth(TITLE_PREFIX);
+  const { text: preview } = truncateByWidth(text, budget);
+  return `${TITLE_PREFIX}${preview}…`;
+}
+
+function showSubmenu(lines, hasOverflow) {
+  SUBMENU_LINE_IDS.forEach((id, i) => {
+    updateMenuItem(
+      id,
+      i < lines.length ? { title: lines[i], visible: true } : { visible: false }
+    );
+  });
+  updateMenuItem(SUBMENU_OVERFLOW_ID, { title: OVERFLOW_TITLE, visible: hasOverflow });
+}
+
+function hideSubmenu() {
+  for (const id of [...SUBMENU_LINE_IDS, SUBMENU_OVERFLOW_ID]) {
+    updateMenuItem(id, { visible: false });
+  }
+}
+
+function updateMenuItem(id, props) {
+  // 若 update 早于槽位 create 到达会报"not found"，静默忽略即可
+  chrome.contextMenus.update(id, props, () => void chrome.runtime.lastError);
 }
 
 function setMenuTitle(title) {
-
   chrome.contextMenus.update(MENU_ROOT_ID, { title }, () => {
     const err = chrome.runtime.lastError;
     if (err) {
