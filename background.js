@@ -24,6 +24,12 @@ const SUBMENU_MAX_SLOTS = 10;
 // 菜单项即启用该行为）。行宽一旦越线，每行译文都会被从中间抠掉一块，看着像串行/被截断。
 // 控制在约 28 个汉字（52 格 ≈ 400px 以内）可稳定避开该阈值。
 const SUBMENU_LINE_WIDTH = 52;
+// 送译预算：每行需翻译多少「源字符」才够填满二级菜单一行（显示宽度）。
+// 关键修正：此前预算按"每行 SUBMENU_LINE_WIDTH 格"估，但英→中译文显示宽度约为原文的 ~0.5
+// （中文更紧凑，且每个汉字占 2 格），导致按 5 行设置只翻出约 3 行译文
+// （用户反馈"选了 5 行却只显示 3 行"）。故源字符预算按行显示宽度的 2 倍估算；
+// 非英源（如中日互译）会多翻一些，但显示受 submenuLines 行数上限约束，不会溢出。
+const SOURCE_CHARS_PER_LINE = SUBMENU_LINE_WIDTH * 2; // = 104
 const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_SLOTS }, (_, i) => `rl-line-${i}`);
 const SUBMENU_SEPARATOR_ID = 'rl-sep';
 const SUBMENU_GOOGLE_ID = 'rl-gtranslate';
@@ -145,10 +151,10 @@ function previewMaxWidth() {
   return PREVIEW_WIDTH_BY_LEVEL[settings.previewLength] || PREVIEW_WIDTH_BY_LEVEL.medium;
 }
 
-// 实际送翻译的字符数随"二级菜单行数"变化：每行约能显示 SUBMENU_LINE_WIDTH 格，
-// 只翻译够填满菜单的量（长选文余下的留给"在 Google 翻译中翻译"看全文），避免整段翻译拖慢响应。
+// 实际送翻译的字符数随"二级菜单行数"变化：每行按 SOURCE_CHARS_PER_LINE（已计入英→中压缩）
+// 估算源字符数，只翻译够填满菜单的量（长选文余下的留给"在 Google 翻译中翻译"看全文），避免整段翻译拖慢响应。
 function translationBudget() {
-  return settings.submenuLines * SUBMENU_LINE_WIDTH;
+  return settings.submenuLines * SOURCE_CHARS_PER_LINE;
 }
 
 // 按预算截断原文，但只在词边界处切：直接 slice 会把英文单词切一半，
