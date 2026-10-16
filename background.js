@@ -19,7 +19,11 @@ const PREVIEW_WIDTH_BY_LEVEL = { short: 60, medium: 80, long: 100 };
 // 行数刻意偏少：长文本阅读交给"在 Google 翻译中翻译"跳网页，菜单里只管预览。
 // 槽位池固定为设置允许的最大行数，实际显示行数由设置 submenuLines 控制。
 const SUBMENU_MAX_SLOTS = 10;
-const SUBMENU_LINE_WIDTH = 72; // 二级行宽上限（显示宽度），比一级略窄，给子菜单缩进留余量
+// 二级行宽上限（显示宽度）。不能设太大：macOS 的系统菜单（NSMenu）会按屏幕可用宽度
+// 对过宽的菜单项标题做「中间省略」——把标题中间一段换成 "…"（Chromium 对超 ~400px 的
+// 菜单项即启用该行为）。行宽一旦越线，每行译文都会被从中间抠掉一块，看着像串行/被截断。
+// 控制在约 28 个汉字（52 格 ≈ 400px 以内）可稳定避开该阈值。
+const SUBMENU_LINE_WIDTH = 52;
 const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_SLOTS }, (_, i) => `rl-line-${i}`);
 const SUBMENU_SEPARATOR_ID = 'rl-sep';
 const SUBMENU_GOOGLE_ID = 'rl-gtranslate';
@@ -147,6 +151,19 @@ function translationBudget() {
   return settings.submenuLines * SUBMENU_LINE_WIDTH;
 }
 
+// 按预算截断原文，但只在词边界处切：直接 slice 会把英文单词切一半，
+// 残词会被逐字翻译成离谱结果（"after" 被切成 "aft" → 译成"船尾"）。
+// 做法：若切点两侧都不是空白，就回退到最近一个空格；回退太靠前（超长词/无空格文本，如中文）
+// 则放弃回退、硬切，避免把整段预算砍掉。
+function budgetSlice(text, limit) {
+  if (text.length <= limit) return text;
+  const head = text.slice(0, limit);
+  const atWordBoundary = /\s/.test(head.slice(-1)) || /\s/.test(text.charAt(limit));
+  if (atWordBoundary) return head;
+  const lastSpace = head.lastIndexOf(' ');
+  return lastSpace > limit * 0.6 ? head.slice(0, lastSpace) : head;
+}
+
 // 请求序号：拖选会连续触发多次翻译，响应到达顺序不保证，
 // 只认最新一次请求的结果，过期的直接丢弃。
 let requestSeq = 0;
@@ -169,7 +186,9 @@ async function translateSelection(text) {
   if (!trimmed) return;
   // 实际送翻译的字数随行数变化：只翻译够填满菜单的量，长选文剩下的走 Google 看全文
   const budget = translationBudget();
-  const toTranslate = trimmed.slice(0, budget);
+  // 只在词边界处截断：直接 slice 会把英文单词切一半（如 "after"→"aft"），
+  // 残词会被逐字翻译成离谱结果（"aft"→"船尾"）。见 budgetSlice。
+  const toTranslate = budgetSlice(trimmed, budget);
   const sourceTruncated = trimmed.length > budget;
   const seq = ++requestSeq;
 
@@ -253,7 +272,8 @@ async function handleMenuClick(info) {
     result = last;
   } else if (sel) {
     // 缓存未命中（如浏览器重启过、缓存是别的选区）才现场重翻；同样只翻够填满菜单的量
-    result = await getTranslation(sel.slice(0, translationBudget()), settings.targetLang);
+    // 用 budgetSlice 只在词边界处截断，避免把单词切一半翻出离谱结果
+    result = await getTranslation(budgetSlice(sel, translationBudget()), settings.targetLang);
   } else {
     return; // 既无选区也无缓存，放弃
   }
