@@ -38,7 +38,7 @@ loadSettings().then(fillForm);
 
 async function save() {
   const submenuLines = Math.min(
-    6,
+    10,
     Math.max(1, parseInt(getSegmented('submenuLines'), 10) || DEFAULT_SETTINGS.submenuLines)
   );
   await chrome.storage.sync.set({

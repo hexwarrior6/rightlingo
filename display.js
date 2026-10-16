@@ -37,7 +37,7 @@ export function truncateByWidth(text, maxWidth) {
 
 // 把长译文拆成若干显示行（用于二级菜单，每行一个菜单项）：
 // - 优先在空格处断行，不把英文单词切半；没有空格可用时（连续中文、长 URL）按宽度硬切
-// - 最多 maxLines 行；没显示完的部分经 remainder 返回，由调用方显示"… 查看完整译文"
+// - 最多 maxLines 行；没显示完的部分经 remainder 返回（截断由一级标题的 "…" 提示，复制走底部"复制完整译文"）
 export function splitIntoLines(text, lineWidth, maxLines) {
   const lines = [];
   let remaining = text;

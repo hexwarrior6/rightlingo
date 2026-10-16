@@ -14,15 +14,13 @@ const TITLE_PREFIX = '译文：';
 // 具体档位由设置 previewLength 控制（短/中/长）。
 const PREVIEW_WIDTH_BY_LEVEL = { short: 60, medium: 80, long: 100 };
 
-// 二级菜单：固定行槽位 + 溢出提示 + 分隔线 + 操作项。
+// 二级菜单：固定行槽位（最后一行行末带 "…" 表示截断）+ 分隔线 + 操作项（Google 翻译 / 复制完整译文）。
 // 菜单标题不支持换行，"每行一个菜单项"是多行译文的唯一显示方式（PRD §3.3）。
 // 行数刻意偏少：长文本阅读交给"在 Google 翻译中翻译"跳网页，菜单里只管预览。
 // 槽位池固定为设置允许的最大行数，实际显示行数由设置 submenuLines 控制。
-const SUBMENU_MAX_SLOTS = 6;
+const SUBMENU_MAX_SLOTS = 10;
 const SUBMENU_LINE_WIDTH = 72; // 二级行宽上限（显示宽度），比一级略窄，给子菜单缩进留余量
 const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_SLOTS }, (_, i) => `rl-line-${i}`);
-const SUBMENU_OVERFLOW_ID = 'rl-line-more';
-const OVERFLOW_TITLE = '… 查看完整译文'; // 点击 = 复制完整译文
 const SUBMENU_SEPARATOR_ID = 'rl-sep';
 const SUBMENU_GOOGLE_ID = 'rl-gtranslate';
 const GOOGLE_ITEM_TITLE = '在 Google 翻译中翻译';
@@ -34,7 +32,6 @@ const COPY_TITLE = '复制完整译文';
 const COPYABLE_IDS = new Set([
   MENU_ROOT_ID,
   ...SUBMENU_LINE_IDS,
-  SUBMENU_OVERFLOW_ID,
   SUBMENU_COPY_ID,
 ]);
 
@@ -58,9 +55,10 @@ const PLACEHOLDER_TITLE = '译文：正在翻译…';
 const FAILED_TITLE = '译文：（翻译失败）';
 const SAME_LANG_TITLE = '译文：（选中文本已是目标语言）';
 
-// 菜单最多能显示约 40 个汉字，超出部分翻译了也显示不了
-// （"复制完整译文"是阶段五的能力），先对送翻译的文本设上限。
-const MAX_TRANSLATION_CHARS = 500;
+// 原文（source）上限：content.js 上报整段（上限 2000，与 MAX_SELECTION_LENGTH 对齐），
+// 用于"在 Google 翻译中翻译"打开完整原文 + storage.session 缓存；
+// 注意：真正送去翻译的只是 translationBudget() 算出的、够填满菜单的部分，长选文不整段翻译（见下）。
+const MAX_SOURCE_CHARS = 2000;
 const CACHE_MAX_ENTRIES = 100;
 
 // SW 每次被唤醒都会重新执行顶层代码。
@@ -92,14 +90,7 @@ function createMenus() {
       visible: false,
     });
   }
-  createItem({
-    id: SUBMENU_OVERFLOW_ID,
-    parentId: MENU_ROOT_ID,
-    title: OVERFLOW_TITLE,
-    contexts: ['selection'],
-    visible: false,
-  });
-  // 菜单项按创建顺序显示：译文行 → 溢出提示 → 分隔线 → Google 翻译 → 复制
+  // 菜单项按创建顺序显示：译文行（最后一行行末带 "…" 表示截断）→ 分隔线 → Google 翻译 → 复制
   createItem({
     id: SUBMENU_SEPARATOR_ID,
     parentId: MENU_ROOT_ID,
@@ -150,6 +141,12 @@ function previewMaxWidth() {
   return PREVIEW_WIDTH_BY_LEVEL[settings.previewLength] || PREVIEW_WIDTH_BY_LEVEL.medium;
 }
 
+// 实际送翻译的字符数随"二级菜单行数"变化：每行约能显示 SUBMENU_LINE_WIDTH 格，
+// 只翻译够填满菜单的量（长选文余下的留给"在 Google 翻译中翻译"看全文），避免整段翻译拖慢响应。
+function translationBudget() {
+  return settings.submenuLines * SUBMENU_LINE_WIDTH;
+}
+
 // 请求序号：拖选会连续触发多次翻译，响应到达顺序不保证，
 // 只认最新一次请求的结果，过期的直接丢弃。
 let requestSeq = 0;
@@ -168,13 +165,17 @@ chrome.runtime.onMessage.addListener((msg) => {
 
 async function translateSelection(text) {
   await settingsReady;
-  const trimmed = text.trim().slice(0, MAX_TRANSLATION_CHARS);
+  const trimmed = text.trim().slice(0, MAX_SOURCE_CHARS); // 全文（存储 + Google 跳转用），上限 2000
   if (!trimmed) return;
+  // 实际送翻译的字数随行数变化：只翻译够填满菜单的量，长选文剩下的走 Google 看全文
+  const budget = translationBudget();
+  const toTranslate = trimmed.slice(0, budget);
+  const sourceTruncated = trimmed.length > budget;
   const seq = ++requestSeq;
 
   let result;
   try {
-    result = await getTranslation(trimmed, settings.targetLang);
+    result = await getTranslation(toTranslate, settings.targetLang);
   } catch (err) {
     console.error('[RightLingo] 翻译失败:', err.message);
     if (seq === requestSeq) {
@@ -187,6 +188,7 @@ async function translateSelection(text) {
   if (seq !== requestSeq) return; // 已有更新的选区，这份结果过期了
 
   // 存一份最近译文到 storage.session（SW 被点击唤醒后内存缓存已空，点击复制要用）
+  // original 存完整原文（供"在 Google 翻译中翻译"打开全文），translation 只是预算内的部分译文
   chrome.storage.session
     .set({ last: { original: trimmed, translation: result.text, srcLang: result.srcLang } })
     .catch(() => {});
@@ -197,7 +199,7 @@ async function translateSelection(text) {
     setMenuTitle(SAME_LANG_TITLE);
     return;
   }
-  showTranslation(result);
+  showTranslation(result, sourceTruncated);
 }
 
 async function getTranslation(text, targetLang) {
@@ -212,13 +214,24 @@ async function getTranslation(text, targetLang) {
 
 // ---------- 点击复制（阶段五） ----------
 
-// 点击任何译文相关菜单项 = 复制完整译文（PRD §6：点击译文即复制，省一个"复制"菜单项）。
+// 点击任何译文相关菜单项 = 复制菜单里显示的译文（PRD §6：点击译文即复制，省一个"复制"菜单项）。
+// 长选文只翻译了填满菜单的前缀，故复制的也是这部分；要看/复制完整原文走"在 Google 翻译中翻译"。
 // 复制无视觉反馈（菜单已随点击关闭），粘贴即可验证。
 chrome.contextMenus.onClicked.addListener((info) => {
   handleMenuClick(info).catch((err) => {
     console.error('[RightLingo] 复制失败:', err.message);
   });
 });
+
+// 取当前选区的原文：优先用 Chrome 右键菜单自带的 info.selectionText；
+// 长选区时它常为空/被截断（Chrome 对 contextMenus 选区的限制），退而用
+// 最近一次翻译缓存里的原文（菜单里正在显示的正是它）。
+async function currentSelectionText(info) {
+  const sel = (info.selectionText || '').trim();
+  if (sel) return sel;
+  const { last } = await chrome.storage.session.get('last');
+  return (last && last.original) || '';
+}
 
 async function handleMenuClick(info) {
   await settingsReady;
@@ -227,34 +240,38 @@ async function handleMenuClick(info) {
     return;
   }
   if (!COPYABLE_IDS.has(info.menuItemId)) return;
-  const original = (info.selectionText || '').trim().slice(0, MAX_TRANSLATION_CHARS);
-  if (!original) return;
 
-  // 点击会唤醒 SW（内存缓存清空），优先用 storage.session 里的最近一次译文；
-  // 对不上（比如浏览器重启过）就现场重翻一次。
   const { last } = await chrome.storage.session.get('last');
+  const sel = (await currentSelectionText(info)).trim();
+
+  // 匹配到最近一次翻译 → 直接用缓存；长选文 selectionText 取不到时也用缓存；
+  // 都没对上（如浏览器重启过、缓存是别的选区）→ 用 selectionText 现场重翻。
   let result;
-  if (last && last.original === original) {
+  if (last && sel && last.original === sel.slice(0, MAX_SOURCE_CHARS)) {
     result = last;
+  } else if (last && !sel) {
+    result = last;
+  } else if (sel) {
+    // 缓存未命中（如浏览器重启过、缓存是别的选区）才现场重翻；同样只翻够填满菜单的量
+    result = await getTranslation(sel.slice(0, translationBudget()), settings.targetLang);
   } else {
-    result = await getTranslation(original, settings.targetLang);
+    return; // 既无选区也无缓存，放弃
   }
 
   const baseLang = settings.targetLang.split('-')[0];
-  const textToCopy = result.srcLang.startsWith(baseLang)
-    ? original
-    : result.translation;
+  const sourceText = result.original || sel;
+  const textToCopy = result.srcLang.startsWith(baseLang) ? sourceText : result.translation;
   // 设置为"原文 + 译文"时拼两行（原文与译文相同时不重复）
   const copyText =
-    settings.copyMode === 'original+translation' && textToCopy !== original
-      ? `${original}\n${textToCopy}`
+    settings.copyMode === 'original+translation' && textToCopy !== sourceText
+      ? `${sourceText}\n${textToCopy}`
       : textToCopy;
   await copyToClipboard(copyText);
 }
 
 // 在 Google 翻译网页版中打开选中的原文（长文本的完整阅读出口）
 async function openInGoogleTranslate(info) {
-  const text = (info.selectionText || '').trim().slice(0, GOOGLE_TRANSLATE_MAX_CHARS);
+  const text = (await currentSelectionText(info)).trim().slice(0, GOOGLE_TRANSLATE_MAX_CHARS);
   if (!text) return;
   const params = new URLSearchParams({ sl: 'auto', tl: 'zh-CN', text, op: 'translate' });
   await chrome.tabs.create({ url: `${GOOGLE_TRANSLATE_URL}?${params}` });
@@ -311,33 +328,37 @@ async function sendCopyMessage(text) {
 
 // 短译文一级直显；长译文一级显示摘要（子菜单箭头由 Chrome 根据可见子项自动添加）；
 // 单词且接口带词典数据时进入词典模式（按词性分组展示多个释义）
-function showTranslation(result) {
+function showTranslation(result, sourceTruncated = false) {
   // 菜单标题不支持换行，多句译文统一压成一行
   const text = String(result.text).replace(/\s*\n+\s*/g, ' ').trim();
 
   if (Array.isArray(result.dict) && settings.dictEnabled) {
-    showDictionaryMenu(text, result.dict);
+    showDictionaryMenu(text, result.dict, sourceTruncated);
     return;
   }
 
   const budget = previewMaxWidth() - displayWidth(TITLE_PREFIX);
-  const { truncated } = truncateByWidth(text, budget);
+  const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
+  // 译文本身放不下、或原文被截断（只翻译了前缀）都要加 "…"
+  const titleTruncated = truncated || sourceTruncated;
+  setMenuTitle(`${TITLE_PREFIX}${preview}${titleTruncated ? '…' : ''}`);
 
-  if (!truncated) {
-    setMenuTitle(TITLE_PREFIX + text);
+  if (!titleTruncated) {
     hideSubmenu();
     return;
   }
 
-  setMenuTitle(buildPreviewTitle(text));
   const { lines, remainder } = splitIntoLines(text, SUBMENU_LINE_WIDTH, settings.submenuLines);
-  showSubmenu(lines, remainder !== null);
+  // 原文被截断时强制显示 "…"（即便译文本身没超出显示行数）
+  showSubmenu(lines, sourceTruncated || remainder !== null);
 }
 
-// 词典模式：一级仍显示主译文；二级每个词性一行（名: 偶像；偶像形象），最多 4 行。
+// 词典模式：一级仍显示主译文；二级每个词性一行（名: 偶像；偶像形象），最多与 submenuLines 一致（默认 5，最多 10 行）。
 // 更多词性不再展开——"在 Google 翻译中翻译"就是看完整词典和例句的出口。
-function showDictionaryMenu(text, dict) {
-  setMenuTitle(buildPreviewTitle(text));
+function showDictionaryMenu(text, dict, sourceTruncated = false) {
+  const budget = previewMaxWidth() - displayWidth(TITLE_PREFIX);
+  const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
+  setMenuTitle(`${TITLE_PREFIX}${preview}${truncated || sourceTruncated ? '…' : ''}`);
   const lines = [];
   for (const entry of dict) {
     if (lines.length >= settings.submenuLines) break;
@@ -346,23 +367,23 @@ function showDictionaryMenu(text, dict) {
     const { text: line, truncated } = truncateByWidth(raw, SUBMENU_LINE_WIDTH);
     lines.push(truncated ? `${line}…` : line);
   }
-  showSubmenu(lines, false);
+  showSubmenu(lines, sourceTruncated);
 }
 
-function buildPreviewTitle(text) {
-  const budget = previewMaxWidth() - displayWidth(TITLE_PREFIX);
-  const { text: preview, truncated } = truncateByWidth(text.trim(), budget);
-  return `${TITLE_PREFIX}${preview}${truncated ? '…' : ''}`;
-}
-
-function showSubmenu(lines, hasOverflow) {
+function showSubmenu(lines, hasOverflow = false) {
+  const lastIdx = lines.length - 1;
   SUBMENU_LINE_IDS.forEach((id, i) => {
-    updateMenuItem(
-      id,
-      i < lines.length ? { title: lines[i], visible: true } : { visible: false }
-    );
+    if (i < lines.length) {
+      // 截断时给最后一行行末追加 "…"，作为"还有更多"的提示（不另起一行；
+      // 若该行已以 "…" 结尾——如词典模式宽度截断——则不重复追加）
+      const title = hasOverflow && i === lastIdx && !lines[i].endsWith('…')
+        ? `${lines[i]}…`
+        : lines[i];
+      updateMenuItem(id, { title, visible: true });
+    } else {
+      updateMenuItem(id, { visible: false });
+    }
   });
-  updateMenuItem(SUBMENU_OVERFLOW_ID, { title: OVERFLOW_TITLE, visible: hasOverflow });
   updateMenuItem(SUBMENU_SEPARATOR_ID, { visible: true });
   updateMenuItem(SUBMENU_GOOGLE_ID, {
     title: GOOGLE_ITEM_TITLE,
@@ -374,7 +395,6 @@ function showSubmenu(lines, hasOverflow) {
 function hideSubmenu() {
   for (const id of [
     ...SUBMENU_LINE_IDS,
-    SUBMENU_OVERFLOW_ID,
     SUBMENU_SEPARATOR_ID,
     SUBMENU_GOOGLE_ID,
     SUBMENU_COPY_ID,
