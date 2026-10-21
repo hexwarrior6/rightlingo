@@ -1,12 +1,48 @@
 // RightLingo 设置页：改动即保存到 chrome.storage.sync，后台监听变化即时生效。
 // 档位类设置用"分段选择"控件（.segmented 里的 button），开关用自定义 toggle。
 import { DEFAULT_SETTINGS, loadSettings } from './settings.js';
+import { COMMON_LANGUAGE_CODES, ALL_LANGUAGES, getLanguageMap } from './languages.js';
 
 const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
 let statusTimer = null;
 
 $('version').textContent = chrome.runtime.getManifest().version;
+
+function initLanguages() {
+  const select = $('targetLang');
+  select.textContent = '';
+
+  const langMap = getLanguageMap();
+  const commonCodesSet = new Set(COMMON_LANGUAGE_CODES);
+
+  // 1. 常用语言组
+  const commonGroup = document.createElement('optgroup');
+  commonGroup.label = '常用语言';
+  for (const code of COMMON_LANGUAGE_CODES) {
+    const label = langMap.get(code);
+    if (!label) continue;
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = label;
+    commonGroup.appendChild(opt);
+  }
+  select.appendChild(commonGroup);
+
+  // 2. 全部语言组
+  const allGroup = document.createElement('optgroup');
+  allGroup.label = '全部语言 (A - Z)';
+  const otherLanguages = ALL_LANGUAGES.filter((item) => !commonCodesSet.has(item.code));
+  for (const item of otherLanguages) {
+    const opt = document.createElement('option');
+    opt.value = item.code;
+    opt.textContent = item.label;
+    allGroup.appendChild(opt);
+  }
+  select.appendChild(allGroup);
+}
+
+initLanguages();
 
 function showSaved() {
   statusEl.classList.add('show');

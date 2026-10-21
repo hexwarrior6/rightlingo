@@ -175,6 +175,17 @@ function budgetSlice(text, limit) {
 let requestSeq = 0;
 const translationCache = new Map(); // 原文 -> { text, srcLang }
 
+// 判断源语言与目标语言是否视为同种语言（跳过翻译并提示"已是目标语言"）
+function isSameLanguage(srcLang, targetLang) {
+  if (!srcLang || !targetLang) return false;
+  const s = srcLang.toLowerCase();
+  const t = targetLang.toLowerCase();
+  // 简繁互译特例：允许简繁互相转换
+  if (t === 'zh-tw' && s.includes('cn')) return false;
+  if (t === 'zh-cn' && s.includes('tw')) return false;
+  return s.split('-')[0] === t.split('-')[0];
+}
+
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || typeof msg !== 'object') return;
   if (msg.type === 'selection-reset') {
@@ -219,7 +230,7 @@ async function translateSelection(text) {
     .catch(() => {});
 
   // 选中文本本身就是目标语言时跳过翻译（目标语言为中文时即"中文跳过"）
-  if (result.srcLang.startsWith(settings.targetLang.split('-')[0])) {
+  if (isSameLanguage(result.srcLang, settings.targetLang)) {
     hideSubmenu();
     setMenuTitle(SAME_LANG_TITLE);
     return;
@@ -236,6 +247,11 @@ async function getTranslation(text, targetLang) {
   translationCache.set(cacheKey, result);
   return result;
 }
+
+// 点击扩展工具栏图标：直接打开设置选项页
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
 
 // ---------- 点击复制（阶段五） ----------
 
@@ -284,9 +300,9 @@ async function handleMenuClick(info) {
     return; // 既无选区也无缓存，放弃
   }
 
-  const baseLang = settings.targetLang.split('-')[0];
+  const isSame = isSameLanguage(result.srcLang, settings.targetLang);
   const sourceText = result.original || sel;
-  const textToCopy = result.srcLang.startsWith(baseLang) ? sourceText : result.translation;
+  const textToCopy = isSame ? sourceText : result.translation;
   // 设置为"原文 + 译文"时拼两行（原文与译文相同时不重复）
   const copyText =
     settings.copyMode === 'original+translation' && textToCopy !== sourceText
@@ -299,7 +315,8 @@ async function handleMenuClick(info) {
 async function openInGoogleTranslate(info) {
   const text = (await currentSelectionText(info)).trim().slice(0, GOOGLE_TRANSLATE_MAX_CHARS);
   if (!text) return;
-  const params = new URLSearchParams({ sl: 'auto', tl: 'zh-CN', text, op: 'translate' });
+  const targetLang = settings.targetLang || DEFAULT_SETTINGS.targetLang || 'zh-CN';
+  const params = new URLSearchParams({ sl: 'auto', tl: targetLang, text, op: 'translate' });
   await chrome.tabs.create({ url: `${GOOGLE_TRANSLATE_URL}?${params}` });
 }
 
