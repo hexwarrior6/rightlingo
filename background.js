@@ -7,7 +7,9 @@ import { displayWidth, truncateByWidth, splitIntoLines } from './display.js';
 import { DEFAULT_SETTINGS, loadSettings } from './settings.js';
 
 const MENU_ROOT_ID = 'rl-root';
-const TITLE_PREFIX = '译文：';
+const i18n = (key, fallback) => (typeof chrome !== 'undefined' && chrome.i18n?.getMessage(key)) || fallback;
+
+const TITLE_PREFIX = i18n('menuPrefix', '译文：');
 // 一级菜单预览的显示宽度上限：CJK/全角按 2 计、其余按 1 计。
 // Chrome 对菜单标题没有字符数硬上限，会把菜单撑宽（有系统最大值），超宽才按像素截断；
 // 上限是为了不让菜单被单个长译文撑成"横幅"（实测菜单最宽约能容纳 80 格）。
@@ -33,11 +35,11 @@ const SOURCE_CHARS_PER_LINE = SUBMENU_LINE_WIDTH * 2; // = 104
 const SUBMENU_LINE_IDS = Array.from({ length: SUBMENU_MAX_SLOTS }, (_, i) => `rl-line-${i}`);
 const SUBMENU_SEPARATOR_ID = 'rl-sep';
 const SUBMENU_GOOGLE_ID = 'rl-gtranslate';
-const GOOGLE_ITEM_TITLE = '在 Google 翻译中翻译';
+const GOOGLE_ITEM_TITLE = i18n('menuGoogleTranslate', '在 Google 翻译中翻译');
 const GOOGLE_TRANSLATE_URL = 'https://translate.google.com/';
 const GOOGLE_TRANSLATE_MAX_CHARS = 2000; // 跳转 URL 里带原文，超长截断
 const SUBMENU_COPY_ID = 'rl-copy';
-const COPY_TITLE = '复制完整译文';
+const COPY_TITLE = i18n('menuCopyFull', '复制完整译文');
 // 点击这些项都复制完整译文（一级对长文本只显示摘要，但复制的是全文）
 const COPYABLE_IDS = new Set([
   MENU_ROOT_ID,
@@ -48,22 +50,22 @@ const COPYABLE_IDS = new Set([
 // 词典模式：单词查询时按词性分组展示多个释义（接口 dt=bd 词典区，网页版"词典"标签同源）。
 // 与译文行共用同一组行槽位，每个词性占一行。
 const POS_LABELS = {
-  noun: '名',
-  verb: '动',
-  adjective: '形',
-  adverb: '副',
-  preposition: '介',
-  conjunction: '连',
-  pronoun: '代',
-  interjection: '叹',
-  phrase: '短语',
-  numeral: '数',
+  noun: i18n('posNoun', '名'),
+  verb: i18n('posVerb', '动'),
+  adjective: i18n('posAdj', '形'),
+  adverb: i18n('posAdv', '副'),
+  preposition: i18n('posPrep', '介'),
+  conjunction: i18n('posConj', '连'),
+  pronoun: i18n('posPron', '代'),
+  interjection: i18n('posInterj', '叹'),
+  phrase: 'phrase',
+  numeral: 'num',
 };
 
 // 状态文案：新选区手势开始时的占位符（兼作"正在翻译"提示）、失败、与目标语言相同
-const PLACEHOLDER_TITLE = '译文：正在翻译…';
-const FAILED_TITLE = '译文：（翻译失败）';
-const SAME_LANG_TITLE = '译文：（选中文本已是目标语言）';
+const PLACEHOLDER_TITLE = i18n('menuTranslating', '译文：正在翻译…');
+const FAILED_TITLE = i18n('menuFailed', '译文：（翻译失败）');
+const SAME_LANG_TITLE = i18n('menuSameLang', '译文：（选中文本已是目标语言）');
 
 // 原文（source）上限：content.js 上报整段（上限 2000，与 MAX_SELECTION_LENGTH 对齐），
 // 用于"在 Google 翻译中翻译"打开完整原文 + storage.session 缓存；

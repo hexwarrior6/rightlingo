@@ -154,23 +154,23 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>RightLingo 设置</h1>
-      <div class="sub">原生右键翻译 · <span class="ver">v<span id="version"></span></span></div>
+      <h1 data-i18n="optionsTitle">RightLingo 设置</h1>
+      <div class="sub"><span data-i18n="optionsSubtitle">原生右键翻译</span> · <span class="ver">v<span id="version"></span></span></div>
     </header>
 
     <div class="card">
-      <h2>翻译</h2>
+      <h2 data-i18n="secTranslation">翻译</h2>
       <div class="row">
         <div class="label">
-          <div class="title">目标语言</div>
-          <div class="hint">选中文本本身就是目标语言时提示而不翻译；目标设为英文后，中文也能翻译</div>
+          <div class="title" data-i18n="targetLangTitle">目标语言</div>
+          <div class="hint" data-i18n="targetLangHint">选中文本本身就是目标语言时提示而不翻译；目标设为英文后，中文也能翻译</div>
         </div>
         <select id="targetLang"></select>
       </div>
       <div class="row">
         <div class="label">
-          <div class="title">词典模式</div>
-          <div class="hint">选中单词时显示分词性的多个释义</div>
+          <div class="title" data-i18n="dictModeTitle">词典模式</div>
+          <div class="hint" data-i18n="dictModeHint">选中单词时显示分词性的多个释义</div>
         </div>
         <span class="switch">
           <input type="checkbox" id="dictEnabled" />
@@ -181,22 +181,22 @@
     </div>
 
     <div class="card">
-      <h2>菜单显示</h2>
+      <h2 data-i18n="secDisplay">显示</h2>
       <div class="row">
         <div class="label">
-          <div class="title">一级菜单摘要长度</div>
-          <div class="hint">超过该长度的译文进入"摘要 + 二级菜单"</div>
+          <div class="title" data-i18n="previewLenTitle">一级菜单摘要长度</div>
+          <div class="hint" data-i18n="previewLenHint">决定"一级直显 vs 摘要 + 二级菜单"的分界线</div>
         </div>
         <div class="segmented" id="previewLength">
-          <button data-value="short">短</button>
-          <button data-value="medium">中</button>
-          <button data-value="long">长</button>
+          <button data-value="short" data-i18n="previewShort">短</button>
+          <button data-value="medium" data-i18n="previewMedium">中</button>
+          <button data-value="long" data-i18n="previewLong">长</button>
         </div>
       </div>
       <div class="row">
         <div class="label">
-          <div class="title">二级菜单行数</div>
-          <div class="hint">长译文最多显示几行；完整阅读用"在 Google 翻译中翻译"</div>
+          <div class="title" data-i18n="submenuLinesTitle">二级菜单行数</div>
+          <div class="hint" data-i18n="submenuLinesHint">长译文最多显示几行；完整阅读用"在 Google 翻译中翻译"</div>
         </div>
         <div class="segmented num" id="submenuLines">
           <button data-value="1">1</button>
@@ -213,8 +213,8 @@
       </div>
       <div class="row">
         <div class="label">
-          <div class="title">"在 Google 翻译中翻译"</div>
-          <div class="hint">长文本二级菜单底部的网页跳转入口</div>
+          <div class="title" data-i18n="showGoogleTitle">"在 Google 翻译中翻译"</div>
+          <div class="hint" data-i18n="showGoogleHint">长文本二级菜单底部的网页跳转入口</div>
         </div>
         <span class="switch">
           <input type="checkbox" id="showGoogleItem" />
@@ -225,22 +225,22 @@
     </div>
 
     <div class="card">
-      <h2>复制</h2>
+      <h2 data-i18n="secCopy">复制</h2>
       <div class="row">
         <div class="label">
-          <div class="title">点击译文时复制</div>
-          <div class="hint">"原文 + 译文"会复制两行，适合背单词、记笔记</div>
+          <div class="title" data-i18n="copyModeTitle">点击译文时复制</div>
+          <div class="hint" data-i18n="copyModeHint">"原文 + 译文"会复制两行，适合背单词、记笔记</div>
         </div>
         <div class="segmented" id="copyMode">
-          <button data-value="translation">仅译文</button>
-          <button data-value="original+translation">原文 + 译文</button>
+          <button data-value="translation" data-i18n="copyTranslationOnly">仅译文</button>
+          <button data-value="original+translation" data-i18n="copyOriginalAndTrans">原文 + 译文</button>
         </div>
       </div>
     </div>
 
     <footer>
-      <button id="reset">恢复默认</button>
-      <span id="status">已保存</span>
+      <button id="reset" data-i18n="btnReset">恢复默认</button>
+      <span id="status" data-i18n="statusSaved">已保存</span>
     </footer>
   </div>
 

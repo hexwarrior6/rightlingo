@@ -1,0 +1,73 @@
+{
+  "appName": {
+    "message": "RightLingo - Context Menu Translation",
+    "description": "The name of the extension."
+  },
+  "appDesc": {
+    "message": "Instant translation and dictionary definitions right in your context menu. Zero popups, zero clutter.",
+    "description": "The description of the extension."
+  },
+  "actionTitle": {
+    "message": "RightLingo Settings",
+    "description": "Tooltip for toolbar icon."
+  },
+  "menuPrefix": {
+    "message": "Translation: ",
+    "description": "Prefix for top-level menu item."
+  },
+  "menuTranslating": {
+    "message": "Translation: Translating…",
+    "description": "Placeholder while translation is in progress."
+  },
+  "menuSameLang": {
+    "message": "Translation: (Already in target language)",
+    "description": "Notice when text is already in the target language."
+  },
+  "menuFailed": {
+    "message": "Translation: (Translation failed)",
+    "description": "Notice when translation fails."
+  },
+  "menuGoogleTranslate": {
+    "message": "Translate in Google Translate",
+    "description": "Context menu link to open Google Translate."
+  },
+  "menuCopyFull": {
+    "message": "Copy Full Translation",
+    "description": "Menu button to copy translation."
+  },
+  "posNoun": { "message": "noun" },
+  "posVerb": { "message": "verb" },
+  "posAdj": { "message": "adj" },
+  "posAdv": { "message": "adv" },
+  "posPron": { "message": "pron" },
+  "posPrep": { "message": "prep" },
+  "posConj": { "message": "conj" },
+  "posInterj": { "message": "interj" },
+  "posAbbr": { "message": "abbr" },
+  "optionsTitle": { "message": "RightLingo Settings" },
+  "optionsSubtitle": { "message": "Context Menu Translation" },
+  "secTranslation": { "message": "Translation" },
+  "targetLangTitle": { "message": "Target Language" },
+  "targetLangHint": { "message": "Skips translation if text already matches target language. Setting target to English enables translation from other languages." },
+  "dictModeTitle": { "message": "Dictionary Mode" },
+  "dictModeHint": { "message": "Show definitions grouped by parts of speech for single words" },
+  "secDisplay": { "message": "Display & Layout" },
+  "previewLenTitle": { "message": "First-level Summary Length" },
+  "previewLenHint": { "message": "Threshold for displaying full translation on the first level vs. folding into submenu" },
+  "previewShort": { "message": "Short" },
+  "previewMedium": { "message": "Medium" },
+  "previewLong": { "message": "Long" },
+  "submenuLinesTitle": { "message": "Submenu Lines" },
+  "submenuLinesHint": { "message": "Max visible lines for long translations; full reading via \"Translate in Google Translate\"" },
+  "showGoogleTitle": { "message": "\"Translate in Google Translate\"" },
+  "showGoogleHint": { "message": "Web link at the bottom of the submenu" },
+  "secCopy": { "message": "Copy" },
+  "copyModeTitle": { "message": "Copy Action on Click" },
+  "copyModeHint": { "message": "\"Original + Translation\" copies both lines, handy for vocabulary notes" },
+  "copyTranslationOnly": { "message": "Translation Only" },
+  "copyOriginalAndTrans": { "message": "Original + Translation" },
+  "btnReset": { "message": "Reset to Defaults" },
+  "statusSaved": { "message": "Saved" },
+  "groupCommon": { "message": "Common Languages" },
+  "groupAll": { "message": "All Languages (A - Z)" }
+}

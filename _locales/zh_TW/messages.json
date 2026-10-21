@@ -1,0 +1,73 @@
+{
+  "appName": {
+    "message": "RightLingo - 原生右鍵翻譯",
+    "description": "擴充功能名稱"
+  },
+  "appDesc": {
+    "message": "選取文字，右鍵選單直接查看譯文與詞典釋義。零彈窗、零干擾、毫秒級響應的原生沉浸式翻譯擴充功能。",
+    "description": "擴充功能描述"
+  },
+  "actionTitle": {
+    "message": "RightLingo 設定",
+    "description": "工具列圖示提示"
+  },
+  "menuPrefix": {
+    "message": "譯文：",
+    "description": "一級選單前綴"
+  },
+  "menuTranslating": {
+    "message": "譯文：正在翻譯…",
+    "description": "翻譯中的佔位文字"
+  },
+  "menuSameLang": {
+    "message": "譯文：（選取文字已是目標語言）",
+    "description": "已是目標語言提示"
+  },
+  "menuFailed": {
+    "message": "譯文：（翻譯失敗）",
+    "description": "翻譯失敗提示"
+  },
+  "menuGoogleTranslate": {
+    "message": "在 Google 翻譯中翻譯",
+    "description": "開啟 Google 翻譯選單項目"
+  },
+  "menuCopyFull": {
+    "message": "複製完整譯文",
+    "description": "複製按鈕文字"
+  },
+  "posNoun": { "message": "名" },
+  "posVerb": { "message": "動" },
+  "posAdj": { "message": "形" },
+  "posAdv": { "message": "副" },
+  "posPron": { "message": "代" },
+  "posPrep": { "message": "介" },
+  "posConj": { "message": "連" },
+  "posInterj": { "message": "嘆" },
+  "posAbbr": { "message": "縮" },
+  "optionsTitle": { "message": "RightLingo 設定" },
+  "optionsSubtitle": { "message": "原生右鍵翻譯" },
+  "secTranslation": { "message": "翻譯" },
+  "targetLangTitle": { "message": "目標語言" },
+  "targetLangHint": { "message": "選取文字本身已是目標語言時提示而不翻譯；目標設為英文後，中文也能翻譯" },
+  "dictModeTitle": { "message": "詞典模式" },
+  "dictModeHint": { "message": "選取單詞時顯示依詞性分組的多個釋義" },
+  "secDisplay": { "message": "顯示" },
+  "previewLenTitle": { "message": "一級選單摘要長度" },
+  "previewLenHint": { "message": "決定「一級直顯 vs 摘要 + 二級選單」的分界線" },
+  "previewShort": { "message": "短" },
+  "previewMedium": { "message": "中" },
+  "previewLong": { "message": "長" },
+  "submenuLinesTitle": { "message": "二級選單行數" },
+  "submenuLinesHint": { "message": "長譯文最多顯示幾行；完整閱讀請用「在 Google 翻譯中翻譯」" },
+  "showGoogleTitle": { "message": "「在 Google 翻譯中翻譯」" },
+  "showGoogleHint": { "message": "長文字二級選單底部的網頁跳轉入口" },
+  "secCopy": { "message": "複製" },
+  "copyModeTitle": { "message": "點選譯文時複製" },
+  "copyModeHint": { "message": "「原文 + 譯文」會複製兩行，適合背單字、做筆記" },
+  "copyTranslationOnly": { "message": "僅譯文" },
+  "copyOriginalAndTrans": { "message": "原文 + 譯文" },
+  "btnReset": { "message": "恢復預設值" },
+  "statusSaved": { "message": "已儲存" },
+  "groupCommon": { "message": "常用語言" },
+  "groupAll": { "message": "全部語言 (A - Z)" }
+}

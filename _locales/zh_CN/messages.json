@@ -1,0 +1,73 @@
+{
+  "appName": {
+    "message": "RightLingo - 原生右键翻译",
+    "description": "扩展程序名称"
+  },
+  "appDesc": {
+    "message": "选中文本，右键菜单直接查看译文与词典释义。零弹窗、零打扰、毫秒级响应的原生沉浸式翻译扩展。",
+    "description": "扩展程序描述"
+  },
+  "actionTitle": {
+    "message": "RightLingo 设置",
+    "description": "工具栏图标提示"
+  },
+  "menuPrefix": {
+    "message": "译文：",
+    "description": "一级菜单前缀"
+  },
+  "menuTranslating": {
+    "message": "译文：正在翻译…",
+    "description": "翻译中的占位符"
+  },
+  "menuSameLang": {
+    "message": "译文：（选中文本已是目标语言）",
+    "description": "已是目标语言的提示"
+  },
+  "menuFailed": {
+    "message": "译文：（翻译失败）",
+    "description": "翻译失败提示"
+  },
+  "menuGoogleTranslate": {
+    "message": "在 Google 翻译中翻译",
+    "description": "跳转 Google 翻译菜单项"
+  },
+  "menuCopyFull": {
+    "message": "复制完整译文",
+    "description": "复制按钮文案"
+  },
+  "posNoun": { "message": "名" },
+  "posVerb": { "message": "动" },
+  "posAdj": { "message": "形" },
+  "posAdv": { "message": "副" },
+  "posPron": { "message": "代" },
+  "posPrep": { "message": "介" },
+  "posConj": { "message": "连" },
+  "posInterj": { "message": "叹" },
+  "posAbbr": { "message": "缩" },
+  "optionsTitle": { "message": "RightLingo 设置" },
+  "optionsSubtitle": { "message": "原生右键翻译" },
+  "secTranslation": { "message": "翻译" },
+  "targetLangTitle": { "message": "目标语言" },
+  "targetLangHint": { "message": "选中文本本身就是目标语言时提示而不翻译；目标设为英文后，中文也能翻译" },
+  "dictModeTitle": { "message": "词典模式" },
+  "dictModeHint": { "message": "选中单词时显示分词性的多个释义" },
+  "secDisplay": { "message": "显示" },
+  "previewLenTitle": { "message": "一级菜单摘要长度" },
+  "previewLenHint": { "message": "决定\"一级直显 vs 摘要 + 二级菜单\"的分界线" },
+  "previewShort": { "message": "短" },
+  "previewMedium": { "message": "中" },
+  "previewLong": { "message": "长" },
+  "submenuLinesTitle": { "message": "二级菜单行数" },
+  "submenuLinesHint": { "message": "长译文最多显示几行；完整阅读用\"在 Google 翻译中翻译\"" },
+  "showGoogleTitle": { "message": "\"在 Google 翻译中翻译\"" },
+  "showGoogleHint": { "message": "长文本二级菜单底部的网页跳转入口" },
+  "secCopy": { "message": "复制" },
+  "copyModeTitle": { "message": "点击译文时复制" },
+  "copyModeHint": { "message": "\"原文 + 译文\"会复制两行，适合背单词、记笔记" },
+  "copyTranslationOnly": { "message": "仅译文" },
+  "copyOriginalAndTrans": { "message": "原文 + 译文" },
+  "btnReset": { "message": "恢复默认" },
+  "statusSaved": { "message": "已保存" },
+  "groupCommon": { "message": "常用语言" },
+  "groupAll": { "message": "全部语言 (A - Z)" }
+}

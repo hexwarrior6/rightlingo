@@ -38,6 +38,7 @@ zip -q -r "$ZIP_PATH" \
   options.js \
   offscreen.html \
   offscreen.js \
+  _locales/ \
   icons/ \
   -x "*.DS_Store" \
   -x "*__MACOSX*" \

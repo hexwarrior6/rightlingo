@@ -7,6 +7,16 @@ const $ = (id) => document.getElementById(id);
 const statusEl = $('status');
 let statusTimer = null;
 
+function applyI18n() {
+  if (typeof chrome === 'undefined' || !chrome.i18n) return;
+  const pageTitle = chrome.i18n.getMessage('optionsTitle');
+  if (pageTitle) document.title = pageTitle;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const msg = chrome.i18n.getMessage(el.dataset.i18n);
+    if (msg) el.textContent = msg;
+  });
+}
+
 $('version').textContent = chrome.runtime.getManifest().version;
 
 function initLanguages() {
@@ -18,7 +28,7 @@ function initLanguages() {
 
   // 1. 常用语言组
   const commonGroup = document.createElement('optgroup');
-  commonGroup.label = '常用语言';
+  commonGroup.label = (typeof chrome !== 'undefined' && chrome.i18n?.getMessage('groupCommon')) || '常用语言';
   for (const code of COMMON_LANGUAGE_CODES) {
     const label = langMap.get(code);
     if (!label) continue;
@@ -31,7 +41,7 @@ function initLanguages() {
 
   // 2. 全部语言组
   const allGroup = document.createElement('optgroup');
-  allGroup.label = '全部语言 (A - Z)';
+  allGroup.label = (typeof chrome !== 'undefined' && chrome.i18n?.getMessage('groupAll')) || '全部语言 (A - Z)';
   const otherLanguages = ALL_LANGUAGES.filter((item) => !commonCodesSet.has(item.code));
   for (const item of otherLanguages) {
     const opt = document.createElement('option');
@@ -42,6 +52,7 @@ function initLanguages() {
   select.appendChild(allGroup);
 }
 
+applyI18n();
 initLanguages();
 
 function showSaved() {
