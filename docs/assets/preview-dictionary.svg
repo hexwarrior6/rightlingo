@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" width="860" height="480">
+  <defs>
+    <filter id="shadow" x="-8%" y="-8%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.08"/>
+    </filter>
+    <linearGradient id="browserBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F3F3F5"/>
+      <stop offset="100%" stop-color="#E5E5E8"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="860" height="480" fill="#F8FAFC" rx="16"/>
+
+  <!-- Simulated Browser Window -->
+  <g transform="translate(30, 24)">
+    <!-- Window Outline & Shadow -->
+    <rect width="800" height="432" rx="10" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1" filter="url(#shadow)"/>
+
+    <!-- Browser Titlebar -->
+    <path d="M 0 10 Q 0 0 10 0 L 790 0 Q 800 0 800 10 L 800 42 L 0 42 Z" fill="url(#browserBar)"/>
+    <!-- Window Controls -->
+    <circle cx="20" cy="21" r="5.5" fill="#EF4444"/>
+    <circle cx="38" cy="21" r="5.5" fill="#F59E0B"/>
+    <circle cx="56" cy="21" r="5.5" fill="#10B981"/>
+
+    <!-- Omnibox / URL Bar -->
+    <rect x="90" y="9" width="620" height="24" rx="12" fill="#FFFFFF" stroke="#D1D5DB" stroke-width="0.8"/>
+    <circle cx="106" cy="21" r="4" fill="#9CA3AF"/>
+    <text x="120" y="25" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11" fill="#4B5563">https://en.wikipedia.org/wiki/Serendipity</text>
+
+    <!-- Web Page Article Body -->
+    <g transform="translate(48, 72)">
+      <!-- Article Title -->
+      <text x="0" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Serendipity</text>
+      <text x="0" y="44" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" fill="#64748B">From Wikipedia, the free encyclopedia</text>
+      <line x1="0" y1="56" x2="704" y2="56" stroke="#E2E8F0" stroke-width="1"/>
+
+      <!-- Article Paragraph -->
+      <text x="0" y="86" font-family="Georgia, serif" font-size="15" fill="#334155" line-height="26">
+        <tspan x="0" dy="0">Serendipity is an unplanned fortunate discovery. The term is often</tspan>
+        <tspan x="0" dy="26">used to describe the occurrence of events by chance in a happy or</tspan>
+      </text>
+
+      <!-- Second Line with highlighted selected word -->
+      <g transform="translate(0, 138)">
+        <text x="0" y="0" font-family="Georgia, serif" font-size="15" fill="#334155">beneficial way. In research and science, </text>
+        <!-- Selection Highlight: "serendipity" -->
+        <rect x="252" y="-15" width="86" height="20" fill="#B4D5FE" rx="2"/>
+        <text x="254" y="0" font-family="Georgia, serif" font-size="15" fill="#000000" font-weight="500">serendipity</text>
+        <text x="342" y="0" font-family="Georgia, serif" font-size="15" fill="#334155"> plays a remarkable role in</text>
+      </g>
+      <text x="0" y="164" font-family="Georgia, serif" font-size="15" fill="#334155">
+        uncovering breakthroughs that were previously unexpected.
+      </text>
+    </g>
+
+    <!-- Context Menu (Level 1) -->
+    <!-- Positioned near the selection -->
+    <g transform="translate(300, 180)" filter="url(#shadow)">
+      <rect width="210" height="188" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+
+      <!-- Item 1: Active Translation Item with RightLingo Blue Hover -->
+      <rect x="4" y="5" width="202" height="28" rx="5" fill="#EFF6FF"/>
+      <!-- RightLingo Icon Dot/Symbol -->
+      <rect x="12" y="11" width="16" height="16" rx="4" fill="#2563EB"/>
+      <text x="20" y="23" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF" text-anchor="middle">译</text>
+      <text x="34" y="23" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="600" fill="#1D4ED8">译文：意外发现</text>
+      <!-- Arrow indicator ▶ -->
+      <path d="M 194 15 L 199 19 L 194 23 Z" fill="#2563EB"/>
+
+      <!-- Divider -->
+      <line x1="12" y1="38" x2="198" y2="38" stroke="#F1F5F9" stroke-width="1"/>
+
+      <!-- Standard browser menu items (contextual) -->
+      <text x="16" y="58" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" fill="#1E293B">复制 (Copy)</text>
+      <text x="175" y="58" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" fill="#94A3B8">⌘C</text>
+
+      <text x="16" y="86" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" fill="#1E293B">在 Google 中搜索“serendipity”</text>
+
+      <text x="16" y="114" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" fill="#1E293B">打印...</text>
+
+      <line x1="12" y1="128" x2="198" y2="128" stroke="#F1F5F9" stroke-width="1"/>
+
+      <text x="16" y="148" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" fill="#1E293B">朗读选中文本</text>
+      <text x="16" y="174" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" fill="#1E293B">检查 (Inspect)</text>
+    </g>
+
+    <!-- Context Submenu (Level 2: Dictionary Mode) -->
+    <!-- Popped out directly from the top item -->
+    <g transform="translate(514, 180)" filter="url(#shadow)">
+      <rect width="250" height="152" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+
+      <!-- POS Definition 1: 名词 -->
+      <g transform="translate(14, 24)">
+        <rect x="0" y="-12" width="22" height="16" rx="3" fill="#DBEAFE"/>
+        <text x="11" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" fill="#1E40AF" text-anchor="middle">名</text>
+        <text x="28" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12.5" fill="#1E293B">意外发现的运气；侥幸发现</text>
+      </g>
+
+      <!-- POS Definition 2: 形容词 -->
+      <g transform="translate(14, 52)">
+        <rect x="0" y="-12" width="22" height="16" rx="3" fill="#FEF3C7"/>
+        <text x="11" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" fill="#92400E" text-anchor="middle">形</text>
+        <text x="28" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12.5" fill="#1E293B">偶然发现的；善于意外发现的</text>
+      </g>
+
+      <!-- Submenu Divider -->
+      <line x1="10" y1="70" x2="240" y2="70" stroke="#F1F5F9" stroke-width="1"/>
+
+      <!-- Action item 1: Jump to Google Translate Web -->
+      <g transform="translate(14, 94)">
+        <path d="M 0 -2 L 10 -2 M 7 -5 L 10 -2 L 7 1" stroke="#64748B" stroke-width="1.4" fill="none"/>
+        <text x="16" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12.5" fill="#475569">在 Google 翻译中打开</text>
+        <path d="M 218 -8 L 226 -8 L 226 0 M 226 -8 L 220 -2" stroke="#94A3B8" stroke-width="1.2" fill="none"/>
+      </g>
+
+      <!-- Action item 2: One-click Copy -->
+      <g transform="translate(14, 126)">
+        <rect x="0" y="-10" width="10" height="12" rx="1.5" stroke="#2563EB" stroke-width="1.2" fill="none"/>
+        <path d="M 3 -12 L 11 -12 Q 13 -12 13 -10 L 13 0" stroke="#2563EB" stroke-width="1.2" fill="none"/>
+        <text x="18" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12.5" font-weight="600" fill="#2563EB">复制完整译文</text>
+        <text x="180" y="0" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10.5" fill="#3B82F6">点击复制</text>
+      </g>
+    </g>
+  </g>
+</svg>
