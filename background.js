@@ -190,6 +190,10 @@ function isSameLanguage(srcLang, targetLang) {
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || typeof msg !== 'object') return;
+  if (msg.type === 'selection-reset' || msg.type === 'selection') {
+    // 内容脚本有新消息 = 菜单马上会得到当前页面的新状态，取消待执行的重置
+    cancelNeutralReset();
+  }
   if (msg.type === 'selection-reset') {
     // 新的选择手势开始：先把菜单重置为占位符并收起二级菜单，避免残留上一次的内容
     hideSubmenu();
@@ -197,6 +201,41 @@ chrome.runtime.onMessage.addListener((msg) => {
   } else if (msg.type === 'selection' && typeof msg.text === 'string') {
     translateSelection(msg.text);
   }
+});
+
+// ---------- 菜单防串台（跨 tab / 导航重置） ----------
+// 菜单标题是扩展级全局状态，不属于任何 tab：谁最后更新就显示谁的内容。
+// 一旦当前页面没上报（正文在 iframe 里、脚本未注入、上报丢失），菜单就会停留在
+// 上一个页面/上一次选择的译文上。因此在 tab 切换和导航时重置为空状态；
+// 若该页面选区仍在，content.js 会在 visibilitychange/focus 时重新上报，把译文补回来。
+const NEUTRAL_TITLE = 'RightLingo';
+// 重置做短去抖：给"切回 tab 的页面重报选区"留一个取消窗口，
+// 避免重置事件晚于重报到达时，把刚恢复的译文又盖成空状态。
+const NEUTRAL_RESET_DELAY_MS = 300;
+
+let neutralResetTimer = null;
+
+function cancelNeutralReset() {
+  clearTimeout(neutralResetTimer);
+  neutralResetTimer = null;
+}
+
+function scheduleNeutralReset() {
+  cancelNeutralReset();
+  neutralResetTimer = setTimeout(resetMenuToNeutral, NEUTRAL_RESET_DELAY_MS);
+}
+
+function resetMenuToNeutral() {
+  neutralResetTimer = null;
+  hideSubmenu();
+  setMenuTitle(NEUTRAL_TITLE);
+}
+
+chrome.tabs.onActivated.addListener(scheduleNeutralReset);
+chrome.tabs.onUpdated.addListener((_tabId, changeInfo) => {
+  // status/url 任一变化都意味着该 tab 正在导航或换页，旧选区已失效
+  // （不带 "tabs" 权限时 url 拿不到，status 足以覆盖常规导航）
+  if (changeInfo.status === 'loading' || changeInfo.url !== undefined) scheduleNeutralReset();
 });
 
 async function translateSelection(text) {
@@ -448,13 +487,22 @@ function hideSubmenu() {
   }
 }
 
+// "&" 在菜单标题里是助记符前缀（单个 & 会被吞掉，其后字符成为快捷键助记），
+// 须转义成 "&&" 才能原样显示一个 &（chrome.contextMenus 约定）。
+function escapeMenuTitle(title) {
+  return title.replace(/&/g, '&&');
+}
+
 function updateMenuItem(id, props) {
   // 若 update 早于槽位 create 到达会报"not found"，静默忽略即可
+  if (props && typeof props.title === 'string') {
+    props = { ...props, title: escapeMenuTitle(props.title) };
+  }
   chrome.contextMenus.update(id, props, () => void chrome.runtime.lastError);
 }
 
 function setMenuTitle(title) {
-  chrome.contextMenus.update(MENU_ROOT_ID, { title }, () => {
+  chrome.contextMenus.update(MENU_ROOT_ID, { title: escapeMenuTitle(title) }, () => {
     const err = chrome.runtime.lastError;
     if (err) {
       console.error('[RightLingo] 更新菜单失败:', err.message);
